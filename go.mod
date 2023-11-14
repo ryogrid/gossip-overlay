@@ -1,4 +1,4 @@
-module github.com/ryogrid/mesh-overlay
+module github.com/ryogrid/gossip-overlay
 
 go 1.8
 

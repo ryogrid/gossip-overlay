@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/ryogrid/mesh-overlay/core"
-	"github.com/ryogrid/mesh-overlay/util"
+	"github.com/ryogrid/gossip-overlay/core"
+	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"io/ioutil"
 	"log"
