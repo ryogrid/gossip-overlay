@@ -1,4 +1,4 @@
-# mesh-overlay (IN PROGRESS)
+# gossip-overlay (IN PROGRESS)
 
 ## Build
 $ go build main/node.go
