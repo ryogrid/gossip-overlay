@@ -58,21 +58,21 @@ func (p *Peer) Register(send mesh.Gossip) {
 	p.Actions <- func() { p.Send = send }
 }
 
-func (p *Peer) Read(fromPeer mesh.PeerName) []byte {
+func (p *Peer) ReadPeer(fromPeer mesh.PeerName) []byte {
 	return p.St.Read(fromPeer)
 }
 
-func (p *Peer) Write() (result []byte) {
+func (p *Peer) WritePeer() (result []byte) {
 	c := make(chan struct{})
 	p.Actions <- func() {
 		defer close(c)
 		val1 := byte(rand.Int31() % 256)
 		val2 := byte(rand.Int31() % 256)
-		//St := p.St.Write([]byte{val1, val2})
+		//St := p.St.WritePeer([]byte{val1, val2})
 		sendData := []byte{val1, val2}
 		if p.Send != nil {
 			//p.Send.GossipBroadcast(St)
-			fmt.Println("Write", sendData)
+			fmt.Println("WritePeer", sendData)
 			p.Send.GossipUnicast(p.Destname, sendData)
 		} else {
 			p.Logger.Printf("no sender configured; not broadcasting update right now")

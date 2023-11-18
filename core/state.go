@@ -28,14 +28,6 @@ func (buf GossipBytes) Merge(other mesh.GossipData) (complete mesh.GossipData) {
 	return GossipBytes(retBuf)
 }
 
-// represents a connection from a Peer
-type Conn struct {
-	PeerName mesh.PeerName
-	BufMtx   sync.RWMutex
-	// buffered data is accessed through St each time
-	St *State
-}
-
 type State struct {
 	// mesh.PeerName -> []byte
 	Bufs sync.Map

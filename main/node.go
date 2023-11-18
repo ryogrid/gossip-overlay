@@ -41,12 +41,7 @@ func main() {
 		logger.Fatalf("mesh address: %s: %v", *meshListen, err)
 	}
 
-	name, err := mesh.PeerNameFromString(*hwaddr)
-	if err != nil {
-		logger.Fatalf("%s: %v", *hwaddr, err)
-	}
-
-	router, err := mesh.NewRouter(mesh.Config{
+	meshConf := mesh.Config{
 		Host:               host,
 		Port:               port,
 		ProtocolMinVersion: mesh.ProtocolMaxVersion, //mesh.ProtocolMinVersion,
@@ -54,7 +49,14 @@ func main() {
 		ConnLimit:          64,
 		PeerDiscovery:      true,
 		TrustedSubnets:     []*net.IPNet{},
-	}, name, *nickname, mesh.NullOverlay{}, log.New(ioutil.Discard, "", 0))
+	}
+
+	name, err := mesh.PeerNameFromString(*hwaddr)
+	if err != nil {
+		logger.Fatalf("%s: %v", *hwaddr, err)
+	}
+
+	router, err := mesh.NewRouter(meshConf, name, *nickname, mesh.NullOverlay{}, log.New(ioutil.Discard, "", 0))
 
 	if err != nil {
 		logger.Fatalf("Could not create router: %v", err)
