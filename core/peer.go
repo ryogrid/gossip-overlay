@@ -16,13 +16,13 @@ import (
 // and the resulting Gossip registered in turn,
 // before calling mesh.Router.Start.
 type Peer struct {
-	St       *GossipDataManager
-	Send     mesh.Gossip
-	Actions  chan<- func()
-	Quit     chan struct{}
-	Logger   *log.Logger
-	Destname mesh.PeerName
-	Router   *mesh.Router
+	GossipDataMan *GossipDataManager
+	Send          mesh.Gossip
+	Actions       chan<- func()
+	Quit          chan struct{}
+	Logger        *log.Logger
+	Destname      mesh.PeerName
+	Router        *mesh.Router
 }
 
 // Peer implements mesh.Gossiper.
@@ -40,13 +40,13 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, destname mesh.PeerName, nic
 
 	actions := make(chan func())
 	p := &Peer{
-		St:       NewConnectionDataManager(self),
-		Send:     nil, // must .Register() later
-		Actions:  actions,
-		Quit:     make(chan struct{}),
-		Logger:   logger,
-		Destname: destname,
-		Router:   router,
+		GossipDataMan: NewConnectionDataManager(self),
+		Send:          nil, // must .Register() later
+		Actions:       actions,
+		Quit:          make(chan struct{}),
+		Logger:        logger,
+		Destname:      destname,
+		Router:        router,
 	}
 
 	go p.loop(actions)
@@ -84,7 +84,7 @@ func (p *Peer) Register(send mesh.Gossip) {
 }
 
 func (p *Peer) ReadPeer(fromPeer mesh.PeerName) []byte {
-	return p.St.Read(fromPeer)
+	return p.GossipDataMan.Read(fromPeer)
 }
 
 func (p *Peer) WritePeer() (result []byte) {
@@ -134,7 +134,8 @@ func (p *Peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.G
 		return nil, err1
 	}
 
-	received = p.St.MergeReceived(p, src, data)
+	//received = p.GossipDataMan.MergeReceived(p, src, data)
+	received = p.GossipDataMan.MergeComplete(p, src, data)
 	if received == nil {
 		p.Logger.Printf("OnGossipBroadcast %s %v => delta %v", src, data, received)
 	} else {
@@ -147,7 +148,7 @@ func (p *Peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.G
 func (p *Peer) OnGossipUnicast(src mesh.PeerName, buf []byte) error {
 	fmt.Println("OnGossipUnicast called")
 	// decoding is not needed when GossipDataManager is []byte
-	complete := p.St.MergeComplete(p, src, buf)
+	complete := p.GossipDataMan.MergeComplete(p, src, buf)
 	p.Logger.Printf("OnGossipUnicast %s %v => complete %v", src, buf, complete)
 	return nil
 }

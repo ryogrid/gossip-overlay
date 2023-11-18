@@ -9,18 +9,16 @@ import (
 	"log"
 	"math"
 	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
-	"time"
 )
 
 func main() {
 	peers := &util.Stringset{}
 	var (
-		httpListen = flag.String("http", ":8080", "HTTP listen address")
+		side       = flag.String("side", "relay", "specify peer type (default: relay))")
 		meshListen = flag.String("mesh", net.JoinHostPort("0.0.0.0", strconv.Itoa(mesh.Port)), "mesh listen address")
 		hwaddr     = flag.String("hwaddr", util.MustHardwareAddr(), "MAC address, i.e. mesh Peer ID")
 		nickname   = flag.String("nickname", util.MustHostname(), "Peer nickname")
@@ -79,32 +77,6 @@ func main() {
 		signal.Notify(c, syscall.SIGINT)
 		errs <- fmt.Errorf("%s", <-c)
 	}()
-	go func() {
-		logger.Printf("HTTP server starting (%s)", *httpListen)
-		http.HandleFunc("/", Handle(p))
-		errs <- http.ListenAndServe(*httpListen, nil)
-	}()
 
 	logger.Print(<-errs)
-}
-
-func Handle(p *core.Peer) http.HandlerFunc {
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "GET":
-			fmt.Fprintf(w, "ReadPeer => %d\n", p.ReadPeer(mesh.PeerName(3)))
-
-		case "POST":
-			for {
-				// wait until routing info to Destname is available
-				time.Sleep(1 * time.Millisecond)
-				fetched := p.Router.Peers.Fetch(p.Destname)
-				if fetched != nil {
-					break
-				}
-			}
-			fmt.Fprintf(w, "WritePeer => %d\n", p.WritePeer())
-		}
-	}
 }

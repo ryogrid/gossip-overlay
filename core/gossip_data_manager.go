@@ -128,15 +128,22 @@ func (st *GossipDataManager) Merge(other mesh.GossipData) (complete mesh.GossipD
 	return other
 }
 
+/*
 // Merge the data into our GossipDataManager
 // Return a non-nil mesh.GossipData representation of the received Bufs.
 func (st *GossipDataManager) MergeReceived(p *Peer, src mesh.PeerName, data []byte) (received mesh.GossipData) {
-	p.St.Write(src, data)
+	p.GossipDataMan.Write(src, data)
 	return GossipBytes(data)
 }
+*/
 
 func (st *GossipDataManager) MergeComplete(p *Peer, src mesh.PeerName, data []byte) (complete mesh.GossipData) {
-	p.St.Write(src, data)
-	val, _ := p.St.Bufs.Load(src)
+	p.GossipDataMan.Write(src, data)
+	val, _ := p.GossipDataMan.Bufs.Load(src)
 	return GossipBytes(val.([]byte))
+}
+
+func (st *GossipDataManager) Close(remotePeer mesh.PeerName) {
+	st.Bufs.Delete(remotePeer)
+	st.Sessions.Delete(remotePeer)
 }
