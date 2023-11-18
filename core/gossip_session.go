@@ -1,9 +1,7 @@
 package core
 
 import (
-	"net"
 	"sync"
-	"time"
 )
 
 // represents a gossip session throuth remote Peer
@@ -14,6 +12,7 @@ type GossipSession struct {
 	GossipDM *GossipDataManager
 }
 
+/*
 // Read
 func (oc *GossipSession) Read(p []byte) (int, error) {
 	i, rAddr, err := oc.pConn.ReadFrom(p)
@@ -67,3 +66,4 @@ func (oc *GossipSession) SetReadDeadline(time.Time) error {
 func (oc *GossipSession) SetWriteDeadline(time.Time) error {
 	return nil
 }
+*/

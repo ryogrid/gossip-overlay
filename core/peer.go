@@ -49,6 +49,8 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, destname mesh.PeerName, nic
 		Router:   router,
 	}
 
+	go p.loop(actions)
+
 	gossip, err := router.NewGossip(*channel, p)
 	if err != nil {
 		logger.Fatalf("Could not create gossip: %v", err)
@@ -56,17 +58,12 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, destname mesh.PeerName, nic
 
 	p.Register(gossip)
 
-	logger.Printf("mesh router starting (%s)", *meshListen)
-	router.Start()
-
-	defer func() {
-		logger.Printf("mesh router stopping")
-		router.Stop()
+	go func() {
+		logger.Printf("mesh router starting (%s)", *meshListen)
+		router.Start()
 	}()
 
 	router.ConnectionMaker.InitiateConnections(peers.Slice(), true)
-
-	go p.loop(actions)
 	return p
 }
 

@@ -56,37 +56,20 @@ func main() {
 		logger.Fatalf("%s: %v", *hwaddr, err)
 	}
 
-	//router, err := mesh.NewRouter(meshConf, name, *nickname, mesh.NullOverlay{}, log.New(ioutil.Discard, "", 0))
-	//
-	//if err != nil {
-	//	logger.Fatalf("Could not create router: %v", err)
-	//}
-
 	parsed, err1 := strconv.ParseUint(*destname, 10, 64)
 	if err1 != nil {
 		logger.Fatalf("Could not parse Destname: %v", err)
 	}
 
 	p := core.NewPeer(name, logger, mesh.PeerName(parsed), nickname, channel, meshListen, &meshConf, peers)
-	//gossip, err := router.NewGossip(*channel, p)
-	//if err != nil {
-	//	logger.Fatalf("Could not create gossip: %v", err)
-	//}
-	//
-	//p.Register(gossip)
-	//
-	//func() {
-	//	logger.Printf("mesh router starting (%s)", *meshListen)
-	//	router.Start()
-	//}()
-	//defer func() {
-	//	logger.Printf("mesh router stopping")
-	//	router.Stop()
-	//}()
-	//
-	//router.ConnectionMaker.InitiateConnections(peers.Slice(), true)
+
+	defer func() {
+		logger.Printf("mesh router stopping")
+		p.Router.Stop()
+	}()
 
 	errs := make(chan error)
+
 	go func() {
 		c := make(chan os.Signal)
 		signal.Notify(c, syscall.SIGINT)
@@ -97,6 +80,7 @@ func main() {
 		http.HandleFunc("/", Handle(p))
 		errs <- http.ListenAndServe(*httpListen, nil)
 	}()
+
 	logger.Print(<-errs)
 }
 
