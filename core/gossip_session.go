@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -21,8 +22,9 @@ var _ net.Conn = &GossipSession{}
 
 // Read
 func (oc *GossipSession) Read(b []byte) (n int, err error) {
-	oc.SessMtx.Lock()
-	defer oc.SessMtx.Unlock()
+	fmt.Println("GossipSession.Read called")
+	//oc.SessMtx.Lock()
+	//defer oc.SessMtx.Unlock()
 	buf := oc.GossipDM.Read(oc.RemoteAddress.PeerName)
 	ret := make([]byte, len(buf))
 	copy(ret, buf)
@@ -43,10 +45,18 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 
 // Write writes len(p) bytes from p to the DTLS connection
 func (oc *GossipSession) Write(b []byte) (n int, err error) {
-	//return oc.pConn.WriteTo(p, oc.RemoteAddr())
-	oc.SessMtx.Lock()
-	defer oc.SessMtx.Unlock()
-	oc.GossipDM.Write(oc.RemoteAddress.PeerName, b)
+	fmt.Println("GossipSession.Write called", b)
+
+	////return oc.pConn.WriteTo(p, oc.RemoteAddr())
+	//oc.SessMtx.Lock()
+	//defer oc.SessMtx.Unlock()
+	//oc.GossipDM.Write(oc.RemoteAddress.PeerName, b)
+	//return len(b), nil
+
+	//oc.SessMtx.Lock()
+	//defer oc.SessMtx.Unlock()
+	oc.GossipDM.WriteToRemote(b)
+
 	return len(b), nil
 }
 
@@ -58,6 +68,7 @@ func (oc *GossipSession) Close() error {
 }
 
 func (oc *GossipSession) LocalAddr() net.Addr {
+	fmt.Println("GossipSession.LocalAddr called", oc.LocalAddress.PeerName)
 	if oc.LocalAddress != nil {
 		return oc.LocalAddress
 	}
@@ -65,6 +76,7 @@ func (oc *GossipSession) LocalAddr() net.Addr {
 }
 
 func (oc *GossipSession) RemoteAddr() net.Addr {
+	fmt.Println("GossipSession.RemoteAddr called", oc.RemoteAddress.PeerName)
 	if oc.RemoteAddress != nil {
 		return oc.RemoteAddress
 	}
@@ -76,15 +88,18 @@ func (oc *GossipSession) RemoteAddr() net.Addr {
 
 // SetDeadline is a stub
 func (oc *GossipSession) SetDeadline(t time.Time) error {
+	fmt.Println("GossipSession.SetDeadline called", t)
 	return nil
 }
 
 // SetReadDeadline is a stub
 func (oc *GossipSession) SetReadDeadline(t time.Time) error {
+	fmt.Println("GossipSession.SetReadDeadline called", t)
 	return nil
 }
 
 // SetWriteDeadline is a stub
 func (oc *GossipSession) SetWriteDeadline(t time.Time) error {
+	fmt.Println("GossipSession.SetWriteDeadline called", t)
 	return nil
 }

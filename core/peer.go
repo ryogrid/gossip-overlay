@@ -48,6 +48,7 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, destname mesh.PeerName, nic
 		Destname:      destname,
 		Router:        router,
 	}
+	p.GossipDataMan.Peer = p
 
 	go p.loop(actions)
 

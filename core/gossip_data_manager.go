@@ -2,12 +2,12 @@ package core
 
 import (
 	"bytes"
+	"encoding/gob"
+	"fmt"
+	"github.com/weaveworks/mesh"
 	"math"
 	"sync"
-
-	"encoding/gob"
-
-	"github.com/weaveworks/mesh"
+	"time"
 )
 
 type GossipBytes []byte
@@ -35,6 +35,7 @@ type GossipDataManager struct {
 	Self mesh.PeerName
 	// mesh.PeerName -> *GossipSession
 	Sessions sync.Map
+	Peer     *Peer
 }
 
 /*
@@ -48,11 +49,12 @@ var _ mesh.GossipData = GossipBytes([]byte{})
 // Construct an empty GossipDataManager object, ready to receive updates.
 // This is suitable to use at program start.
 // Other peers will populate us with Bufs.
-func NewConnectionDataManager(self mesh.PeerName) *GossipDataManager {
+func NewConnectionDataManager(selfname mesh.PeerName) *GossipDataManager {
 	return &GossipDataManager{
 		Bufs:     sync.Map{},
-		Self:     self,
+		Self:     selfname,
 		Sessions: sync.Map{},
+		Peer:     nil,
 	}
 }
 
@@ -75,12 +77,20 @@ func (st *GossipDataManager) Read(fromPeer mesh.PeerName) (result []byte) {
 	val2, _ := st.Sessions.Load(fromPeer)
 	bufMtx := val2.(*GossipSession).SessMtx
 	bufMtx.Lock()
-	defer bufMtx.Unlock()
+	//defer bufMtx.Unlock()
 
 	retBase := val.([]byte)
+	if len(retBase) == 0 {
+		for len(retBase) == 0 {
+			bufMtx.Unlock()
+			time.Sleep(1 * time.Millisecond)
+			bufMtx.Lock()
+		}
+	}
 	ret := make([]byte, len(retBase))
 	copy(ret, retBase)
 
+	bufMtx.Unlock()
 	return ret
 }
 
@@ -112,6 +122,23 @@ func (st *GossipDataManager) Write(fromPeer mesh.PeerName, data []byte) []byte {
 	st.Bufs.Store(fromPeer, tmpBuf)
 
 	return tmpBuf
+}
+
+func (st *GossipDataManager) WriteToRemote(data []byte) error {
+	c := make(chan struct{})
+	st.Peer.Actions <- func() {
+		defer close(c)
+		if st.Peer.Send != nil {
+			//p.Send.GossipBroadcast(GossipDM)
+			fmt.Println("WriteToRemote", data)
+			st.Peer.Send.GossipUnicast(st.Peer.Destname, data)
+		} else {
+			st.Peer.Logger.Printf("no sender configured; not broadcasting update right now")
+		}
+	}
+	<-c
+
+	return nil
 }
 
 // Encode serializes our complete GossipDataManager to a Slice of byte-slices.
@@ -171,6 +198,8 @@ func (st *GossipDataManager) NewGossipSessionForServer() (*GossipSession, error)
 		SessMtx:       sync.RWMutex{},
 		GossipDM:      st,
 	}
+	st.Sessions.Store(mesh.PeerName(math.MaxUint64), ret)
+	st.Bufs.Store(mesh.PeerName(math.MaxUint64), make([]byte, 0))
 	// store of session is not needed here when creation for server
 
 	return ret, nil
