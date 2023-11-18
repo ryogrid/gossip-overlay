@@ -7,24 +7,28 @@ import (
 )
 
 // represents a gossip session throuth remote Peer
-// implementation of net.PacketConn
+// implementation of net.Conn
 type GossipSession struct {
+	LocalAddress  *PeerAddress
 	RemoteAddress *PeerAddress
 	SessMtx       sync.RWMutex
 	// buffered data is accessed through GossipDM each time
 	GossipDM *GossipDataManager
 }
 
+// GossipSetton implements net.Conn
+var _ net.Conn = &GossipSession{}
+
 // Read
-func (oc *GossipSession) Read(p []byte) (int, error) {
+func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	oc.SessMtx.Lock()
 	defer oc.SessMtx.Unlock()
 	buf := oc.GossipDM.Read(oc.RemoteAddress.PeerName)
 	ret := make([]byte, len(buf))
 	copy(ret, buf)
-	p = ret
+	b = ret
 
-	return len(p), nil
+	return len(b), nil
 
 	//i, rAddr, err := oc.pConn.ReadFrom(p)
 	//if err != nil {
@@ -38,12 +42,12 @@ func (oc *GossipSession) Read(p []byte) (int, error) {
 }
 
 // Write writes len(p) bytes from p to the DTLS connection
-func (oc *GossipSession) Write(p []byte) (n int, err error) {
+func (oc *GossipSession) Write(b []byte) (n int, err error) {
 	//return oc.pConn.WriteTo(p, oc.RemoteAddr())
 	oc.SessMtx.Lock()
 	defer oc.SessMtx.Unlock()
-	oc.GossipDM.Write(oc.RemoteAddress.PeerName, p)
-	return len(p), nil
+	oc.GossipDM.Write(oc.RemoteAddress.PeerName, b)
+	return len(b), nil
 }
 
 // Close closes the conn and releases any Read calls
@@ -53,19 +57,21 @@ func (oc *GossipSession) Close() error {
 	return nil
 }
 
-// LocalAddr is a stub
 func (oc *GossipSession) LocalAddr() net.Addr {
-	if oc.pConn != nil {
-		return oc.pConn.LocalAddr()
+	if oc.LocalAddress != nil {
+		return oc.LocalAddress
 	}
 	return nil
 }
 
-// RemoteAddress is a stub
 func (oc *GossipSession) RemoteAddr() net.Addr {
-	oc.SessMtx.RLock()
-	defer oc.SessMtx.RUnlock()
-	return oc.RemoteAddress
+	if oc.RemoteAddress != nil {
+		return oc.RemoteAddress
+	}
+	return nil
+	//oc.SessMtx.RLock()
+	//defer oc.SessMtx.RUnlock()
+	//return oc.RemoteAddress
 }
 
 // SetDeadline is a stub

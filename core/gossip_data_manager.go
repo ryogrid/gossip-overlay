@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"math"
 	"sync"
 
 	"encoding/gob"
@@ -58,6 +59,7 @@ func NewConnectionDataManager(self mesh.PeerName) *GossipDataManager {
 func (st *GossipDataManager) Read(fromPeer mesh.PeerName) (result []byte) {
 	if _, ok := st.Sessions.Load(fromPeer); !ok {
 		st.Sessions.Store(fromPeer, &GossipSession{
+			LocalAddress:  &PeerAddress{st.Self},
 			RemoteAddress: &PeerAddress{fromPeer},
 			SessMtx:       sync.RWMutex{},
 			GossipDM:      st,
@@ -86,6 +88,7 @@ func (st *GossipDataManager) Write(fromPeer mesh.PeerName, data []byte) []byte {
 	tmpBuf := make([]byte, 0)
 	if _, ok := st.Bufs.Load(fromPeer); !ok {
 		st.Sessions.Store(fromPeer, &GossipSession{
+			LocalAddress:  &PeerAddress{st.Self},
 			RemoteAddress: &PeerAddress{fromPeer},
 			SessMtx:       sync.RWMutex{},
 			GossipDM:      st,
@@ -146,4 +149,29 @@ func (st *GossipDataManager) MergeComplete(p *Peer, src mesh.PeerName, data []by
 func (st *GossipDataManager) Close(remotePeer mesh.PeerName) {
 	st.Bufs.Delete(remotePeer)
 	st.Sessions.Delete(remotePeer)
+}
+
+func (st *GossipDataManager) NewGossipSessionForClient(remotePeer mesh.PeerName) (*GossipSession, error) {
+	ret := &GossipSession{
+		LocalAddress:  &PeerAddress{st.Self},
+		RemoteAddress: &PeerAddress{remotePeer},
+		SessMtx:       sync.RWMutex{},
+		GossipDM:      st,
+	}
+	st.Sessions.Store(remotePeer, ret)
+	st.Bufs.Store(remotePeer, make([]byte, 0))
+
+	return ret, nil
+}
+
+func (st *GossipDataManager) NewGossipSessionForServer() (*GossipSession, error) {
+	ret := &GossipSession{
+		LocalAddress:  &PeerAddress{st.Self},
+		RemoteAddress: &PeerAddress{math.MaxUint64},
+		SessMtx:       sync.RWMutex{},
+		GossipDM:      st,
+	}
+	// store of session is not needed here when creation for server
+
+	return ret, nil
 }

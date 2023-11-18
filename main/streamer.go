@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/pion/logging"
+	"github.com/pion/sctp"
 	"github.com/ryogrid/gossip-overlay/core"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
@@ -13,6 +15,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -78,5 +81,68 @@ func main() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
+	if *side == "recv" {
+		serverRoutine(p)
+	} else if *side == "send" {
+		clientRoutine(p)
+	}
+
 	logger.Print(<-errs)
+}
+
+func serverRoutine(p *core.Peer) {
+	//conn, err := net.ListenUDP("udp", &addr)
+	conn, err := p.GossipDataMan.NewGossipSessionForServer()
+	if err != nil {
+		log.Panic(err)
+	}
+	defer conn.Close()
+	fmt.Println("created a udp listener")
+
+	config := sctp.Config{
+		//NetConn:       &disconnectedPacketConn{pConn: conn},
+		NetConn:       conn,
+		LoggerFactory: logging.NewDefaultLoggerFactory(),
+	}
+	a, err := sctp.Server(config)
+	if err != nil {
+		log.Panic(err)
+	}
+	defer a.Close()
+	fmt.Println("created a server")
+
+	stream, err := a.AcceptStream()
+	if err != nil {
+		log.Panic(err)
+	}
+	defer stream.Close()
+	fmt.Println("accepted a stream")
+
+	// set unordered = true and 10ms treshold for dropping packets
+	//stream.SetReliabilityParams(true, sctp.ReliabilityTypeTimed, 10)
+	stream.SetReliabilityParams(true, sctp.ReliabilityTypeReliable, 0)
+	var pongSeqNum int
+	for {
+		buff := make([]byte, 1024)
+		_, err = stream.Read(buff)
+		if err != nil {
+			log.Panic(err)
+		}
+		pingMsg := string(buff)
+		fmt.Println("received:", pingMsg)
+
+		fmt.Sscanf(pingMsg, "ping %d", &pongSeqNum)
+		pongMsg := fmt.Sprintf("pong %d", pongSeqNum)
+		_, err = stream.Write([]byte(pongMsg))
+		if err != nil {
+			log.Panic(err)
+		}
+		fmt.Println("sent:", pongMsg)
+
+		time.Sleep(time.Second)
+	}
+}
+
+func clientRoutine(p *core.Peer) {
+	panic("not implemented yet")
 }
