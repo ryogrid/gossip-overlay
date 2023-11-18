@@ -6,7 +6,6 @@ import (
 	"github.com/ryogrid/gossip-overlay/core"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -56,35 +56,35 @@ func main() {
 		logger.Fatalf("%s: %v", *hwaddr, err)
 	}
 
-	router, err := mesh.NewRouter(meshConf, name, *nickname, mesh.NullOverlay{}, log.New(ioutil.Discard, "", 0))
-
-	if err != nil {
-		logger.Fatalf("Could not create router: %v", err)
-	}
+	//router, err := mesh.NewRouter(meshConf, name, *nickname, mesh.NullOverlay{}, log.New(ioutil.Discard, "", 0))
+	//
+	//if err != nil {
+	//	logger.Fatalf("Could not create router: %v", err)
+	//}
 
 	parsed, err1 := strconv.ParseUint(*destname, 10, 64)
 	if err1 != nil {
 		logger.Fatalf("Could not parse Destname: %v", err)
 	}
 
-	p := core.NewPeer(name, logger, mesh.PeerName(parsed))
-	gossip, err := router.NewGossip(*channel, p)
-	if err != nil {
-		logger.Fatalf("Could not create gossip: %v", err)
-	}
-
-	p.Register(gossip)
-
-	func() {
-		logger.Printf("mesh router starting (%s)", *meshListen)
-		router.Start()
-	}()
-	defer func() {
-		logger.Printf("mesh router stopping")
-		router.Stop()
-	}()
-
-	router.ConnectionMaker.InitiateConnections(peers.Slice(), true)
+	p := core.NewPeer(name, logger, mesh.PeerName(parsed), nickname, channel, meshListen, &meshConf, peers)
+	//gossip, err := router.NewGossip(*channel, p)
+	//if err != nil {
+	//	logger.Fatalf("Could not create gossip: %v", err)
+	//}
+	//
+	//p.Register(gossip)
+	//
+	//func() {
+	//	logger.Printf("mesh router starting (%s)", *meshListen)
+	//	router.Start()
+	//}()
+	//defer func() {
+	//	logger.Printf("mesh router stopping")
+	//	router.Stop()
+	//}()
+	//
+	//router.ConnectionMaker.InitiateConnections(peers.Slice(), true)
 
 	errs := make(chan error)
 	go func() {
@@ -94,8 +94,29 @@ func main() {
 	}()
 	go func() {
 		logger.Printf("HTTP server starting (%s)", *httpListen)
-		http.HandleFunc("/", util.Handle(p, router))
+		http.HandleFunc("/", Handle(p))
 		errs <- http.ListenAndServe(*httpListen, nil)
 	}()
 	logger.Print(<-errs)
+}
+
+func Handle(p *core.Peer) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			fmt.Fprintf(w, "ReadPeer => %d\n", p.ReadPeer(mesh.PeerName(3)))
+
+		case "POST":
+			for {
+				// wait until routing info to Destname is available
+				time.Sleep(1 * time.Millisecond)
+				fetched := p.Router.Peers.Fetch(p.Destname)
+				if fetched != nil {
+					break
+				}
+			}
+			fmt.Fprintf(w, "WritePeer => %d\n", p.WritePeer())
+		}
+	}
 }

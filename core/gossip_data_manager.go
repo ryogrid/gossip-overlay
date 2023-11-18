@@ -28,37 +28,39 @@ func (buf GossipBytes) Merge(other mesh.GossipData) (complete mesh.GossipData) {
 	return GossipBytes(retBuf)
 }
 
-type State struct {
+type GossipDataManager struct {
 	// mesh.PeerName -> []byte
 	Bufs sync.Map
 	Self mesh.PeerName
-	// mesh.PeerName -> *Conn
-	Conns sync.Map
+	// mesh.PeerName -> *GossipSession
+	Sessions sync.Map
 }
 
-// State implements GossipData.
-var _ mesh.GossipData = &State{}
+/*
+// GossipDataManager implements GossipData.
+var _ mesh.GossipData = &GossipDataManager{}
+*/
 
 // GossipBytes implements GossipData.
 var _ mesh.GossipData = GossipBytes([]byte{})
 
-// Construct an empty State object, ready to receive updates.
+// Construct an empty GossipDataManager object, ready to receive updates.
 // This is suitable to use at program start.
 // Other peers will populate us with Bufs.
-func NewState(self mesh.PeerName) *State {
-	return &State{
-		Bufs:  sync.Map{},
-		Self:  self,
-		Conns: sync.Map{},
+func NewConnectionDataManager(self mesh.PeerName) *GossipDataManager {
+	return &GossipDataManager{
+		Bufs:     sync.Map{},
+		Self:     self,
+		Sessions: sync.Map{},
 	}
 }
 
-func (st *State) Read(fromPeer mesh.PeerName) (result []byte) {
-	if _, ok := st.Conns.Load(fromPeer); !ok {
-		st.Conns.Store(fromPeer, &Conn{
-			PeerName: fromPeer,
-			BufMtx:   sync.RWMutex{},
-			St:       st,
+func (st *GossipDataManager) Read(fromPeer mesh.PeerName) (result []byte) {
+	if _, ok := st.Sessions.Load(fromPeer); !ok {
+		st.Sessions.Store(fromPeer, &GossipSession{
+			RemoteAddress: &PeerAddress{fromPeer},
+			SessMtx:       sync.RWMutex{},
+			GossipDM:      st,
 		})
 	}
 
@@ -68,8 +70,8 @@ func (st *State) Read(fromPeer mesh.PeerName) (result []byte) {
 	}
 	st.Bufs.Store(fromPeer, make([]byte, 0))
 
-	val2, _ := st.Conns.Load(fromPeer)
-	bufMtx := val2.(*Conn).BufMtx
+	val2, _ := st.Sessions.Load(fromPeer)
+	bufMtx := val2.(*GossipSession).SessMtx
 	bufMtx.Lock()
 	defer bufMtx.Unlock()
 
@@ -80,13 +82,13 @@ func (st *State) Read(fromPeer mesh.PeerName) (result []byte) {
 	return ret
 }
 
-func (st *State) Write(fromPeer mesh.PeerName, data []byte) []byte {
+func (st *GossipDataManager) Write(fromPeer mesh.PeerName, data []byte) []byte {
 	tmpBuf := make([]byte, 0)
 	if _, ok := st.Bufs.Load(fromPeer); !ok {
-		st.Conns.Store(fromPeer, &Conn{
-			PeerName: fromPeer,
-			BufMtx:   sync.RWMutex{},
-			St:       st,
+		st.Sessions.Store(fromPeer, &GossipSession{
+			RemoteAddress: &PeerAddress{fromPeer},
+			SessMtx:       sync.RWMutex{},
+			GossipDM:      st,
 		})
 	}
 	var stBuf []byte
@@ -97,8 +99,8 @@ func (st *State) Write(fromPeer mesh.PeerName, data []byte) []byte {
 		st.Bufs.Store(fromPeer, stBuf)
 	}
 
-	val2, _ := st.Conns.Load(fromPeer)
-	bufMtx := val2.(*Conn).BufMtx
+	val2, _ := st.Sessions.Load(fromPeer)
+	bufMtx := val2.(*GossipSession).SessMtx
 	bufMtx.Lock()
 	defer bufMtx.Unlock()
 
@@ -109,9 +111,9 @@ func (st *State) Write(fromPeer mesh.PeerName, data []byte) []byte {
 	return tmpBuf
 }
 
-// Encode serializes our complete State to a Slice of byte-slices.
+// Encode serializes our complete GossipDataManager to a Slice of byte-slices.
 // see https://golang.org/pkg/encoding/gob/
-func (st *State) Encode() [][]byte {
+func (st *GossipDataManager) Encode() [][]byte {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(st.Bufs); err != nil {
 		panic(err)
@@ -121,19 +123,19 @@ func (st *State) Encode() [][]byte {
 }
 
 // Merge merges the other GossipData into this one,
-// and returns our resulting, complete State.
-func (st *State) Merge(other mesh.GossipData) (complete mesh.GossipData) {
+// and returns our resulting, complete GossipDataManager.
+func (st *GossipDataManager) Merge(other mesh.GossipData) (complete mesh.GossipData) {
 	return other
 }
 
-// Merge the data into our State
+// Merge the data into our GossipDataManager
 // Return a non-nil mesh.GossipData representation of the received Bufs.
-func (st *State) MergeReceived(p *Peer, src mesh.PeerName, data []byte) (received mesh.GossipData) {
+func (st *GossipDataManager) MergeReceived(p *Peer, src mesh.PeerName, data []byte) (received mesh.GossipData) {
 	p.St.Write(src, data)
 	return GossipBytes(data)
 }
 
-func (st *State) MergeComplete(p *Peer, src mesh.PeerName, data []byte) (complete mesh.GossipData) {
+func (st *GossipDataManager) MergeComplete(p *Peer, src mesh.PeerName, data []byte) (complete mesh.GossipData) {
 	p.St.Write(src, data)
 	val, _ := p.St.Bufs.Load(src)
 	return GossipBytes(val.([]byte))
