@@ -75,16 +75,16 @@ func (oc *GossipSession) RemoteAddr() net.Addr {
 }
 
 // SetDeadline is a stub
-func (oc *GossipSession) SetDeadline(time.Time) error {
+func (oc *GossipSession) SetDeadline(t time.Time) error {
 	return nil
 }
 
 // SetReadDeadline is a stub
-func (oc *GossipSession) SetReadDeadline(time.Time) error {
+func (oc *GossipSession) SetReadDeadline(t time.Time) error {
 	return nil
 }
 
 // SetWriteDeadline is a stub
-func (oc *GossipSession) SetWriteDeadline(time.Time) error {
+func (oc *GossipSession) SetWriteDeadline(t time.Time) error {
 	return nil
 }
