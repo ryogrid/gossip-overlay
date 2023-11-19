@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"sync"
 	"time"
@@ -25,6 +26,18 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	fmt.Println("GossipSession.Read called")
 	//oc.SessMtx.Lock()
 	//defer oc.SessMtx.Unlock()
+
+	for oc.GossipDM.LastRecvPeer == math.MaxUint64 {
+		// no message received yet at gosship layer
+		time.Sleep(1 * time.Millisecond)
+	}
+
+	if oc.RemoteAddress.PeerName == math.MaxUint64 {
+		// first message at gosship layer
+		// so set src info to oc
+		oc.RemoteAddress.PeerName = oc.GossipDM.LastRecvPeer
+	}
+
 	buf := oc.GossipDM.Read(oc.RemoteAddress.PeerName)
 	ret := make([]byte, len(buf))
 	copy(ret, buf)
@@ -55,7 +68,9 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 
 	//oc.SessMtx.Lock()
 	//defer oc.SessMtx.Unlock()
-	oc.GossipDM.WriteToRemote(b)
+
+	//oc.GossipDM.WriteToRemote(b)
+	oc.GossipDM.WriteToRemote(oc.RemoteAddress.PeerName, b)
 
 	return len(b), nil
 }

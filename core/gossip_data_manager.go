@@ -34,8 +34,9 @@ type GossipDataManager struct {
 	Bufs sync.Map
 	Self mesh.PeerName
 	// mesh.PeerName -> *GossipSession
-	Sessions sync.Map
-	Peer     *Peer
+	Sessions     sync.Map
+	Peer         *Peer
+	LastRecvPeer mesh.PeerName // for server
 }
 
 /*
@@ -51,10 +52,11 @@ var _ mesh.GossipData = GossipBytes([]byte{})
 // Other peers will populate us with Bufs.
 func NewConnectionDataManager(selfname mesh.PeerName) *GossipDataManager {
 	return &GossipDataManager{
-		Bufs:     sync.Map{},
-		Self:     selfname,
-		Sessions: sync.Map{},
-		Peer:     nil,
+		Bufs:         sync.Map{},
+		Self:         selfname,
+		Sessions:     sync.Map{},
+		Peer:         nil,
+		LastRecvPeer: math.MaxUint64,
 	}
 }
 
@@ -80,12 +82,10 @@ func (st *GossipDataManager) Read(fromPeer mesh.PeerName) (result []byte) {
 	//defer bufMtx.Unlock()
 
 	retBase := val.([]byte)
-	if len(retBase) == 0 {
-		for len(retBase) == 0 {
-			bufMtx.Unlock()
-			time.Sleep(1 * time.Millisecond)
-			bufMtx.Lock()
-		}
+	for len(retBase) == 0 {
+		bufMtx.Unlock()
+		time.Sleep(1 * time.Millisecond)
+		bufMtx.Lock()
 	}
 	ret := make([]byte, len(retBase))
 	copy(ret, retBase)
@@ -121,17 +121,21 @@ func (st *GossipDataManager) Write(fromPeer mesh.PeerName, data []byte) []byte {
 	tmpBuf = append(tmpBuf, data...)
 	st.Bufs.Store(fromPeer, tmpBuf)
 
+	// TODO: temporal impl for server side (not work for multi connection)
+	st.LastRecvPeer = fromPeer
+
 	return tmpBuf
 }
 
-func (st *GossipDataManager) WriteToRemote(data []byte) error {
+func (st *GossipDataManager) WriteToRemote(dest mesh.PeerName, data []byte) error {
 	c := make(chan struct{})
 	st.Peer.Actions <- func() {
 		defer close(c)
 		if st.Peer.Send != nil {
 			//p.Send.GossipBroadcast(GossipDM)
 			fmt.Println("WriteToRemote", data)
-			st.Peer.Send.GossipUnicast(st.Peer.Destname, data)
+			//st.Peer.Send.GossipUnicast(st.Peer.Destname, data)
+			st.Peer.Send.GossipUnicast(dest, data)
 		} else {
 			st.Peer.Logger.Printf("no sender configured; not broadcasting update right now")
 		}
