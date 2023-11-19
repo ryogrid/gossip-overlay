@@ -11,6 +11,15 @@ import (
 	"math/rand"
 )
 
+type PeerType int
+
+// TODO: temporal definition
+const (
+	Relay PeerType = iota
+	Server
+	Client
+)
+
 // Peer encapsulates GossipDataManager and implements mesh.Gossiper.
 // It should be passed to mesh.Router.NewGossip,
 // and the resulting Gossip registered in turn,
@@ -23,6 +32,7 @@ type Peer struct {
 	Logger        *log.Logger
 	Destname      mesh.PeerName
 	Router        *mesh.Router
+	Type          PeerType
 }
 
 // Peer implements mesh.Gossiper.
@@ -47,6 +57,7 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, destname mesh.PeerName, nic
 		Logger:        logger,
 		Destname:      destname,
 		Router:        router,
+		Type:          -1, // must set later
 	}
 	p.GossipDataMan.Peer = p
 

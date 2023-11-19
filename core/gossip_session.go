@@ -27,23 +27,27 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	//oc.SessMtx.Lock()
 	//defer oc.SessMtx.Unlock()
 
-	for oc.GossipDM.LastRecvPeer == math.MaxUint64 {
+	for oc.GossipDM.LastRecvPeer == math.MaxUint64 && oc.GossipDM.Peer.Type == Server {
 		// no message received yet at gosship layer
+		// so can't decide which buffer to read
 		time.Sleep(1 * time.Millisecond)
 	}
 
+	fmt.Println("after LastRecvPeer value check.")
 	if oc.RemoteAddress.PeerName == math.MaxUint64 {
 		// first message at gosship layer
-		// so set src info to oc
+		// so set src info to oc (server side only)
+		fmt.Println("Set Remote PeerName.")
 		oc.RemoteAddress.PeerName = oc.GossipDM.LastRecvPeer
 	}
 
 	buf := oc.GossipDM.Read(oc.RemoteAddress.PeerName)
-	ret := make([]byte, len(buf))
-	copy(ret, buf)
-	b = ret
+	//ret := make([]byte, len(buf))
+	//copy(ret, buf)
+	//b = ret
+	copy(b, buf)
 
-	return len(b), nil
+	return len(buf), nil
 
 	//i, rAddr, err := oc.pConn.ReadFrom(p)
 	//if err != nil {

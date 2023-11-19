@@ -25,9 +25,9 @@ func main() {
 		meshListen = flag.String("mesh", net.JoinHostPort("0.0.0.0", strconv.Itoa(mesh.Port)), "mesh listen address")
 		hwaddr     = flag.String("hwaddr", util.MustHardwareAddr(), "MAC address, i.e. mesh Peer ID")
 		nickname   = flag.String("nickname", util.MustHostname(), "Peer nickname")
-		password   = flag.String("password", "", "password (optional)")
-		channel    = flag.String("channel", "default", "gossip channel name")
-		destname   = flag.String("destname", "", "destination Peer name (optional)")
+		//password   = flag.String("password", "", "password (optional)")
+		channel  = flag.String("channel", "default", "gossip channel name")
+		destname = flag.String("destname", "", "destination Peer name (optional)")
 	)
 	flag.Var(peers, "peer", "initial Peer (may be repeated)")
 	flag.Parse()
@@ -47,10 +47,11 @@ func main() {
 		Host:               host,
 		Port:               port,
 		ProtocolMinVersion: mesh.ProtocolMaxVersion, //mesh.ProtocolMinVersion,
-		Password:           []byte(*password),
-		ConnLimit:          64,
-		PeerDiscovery:      true,
-		TrustedSubnets:     []*net.IPNet{},
+		//Password:           []byte(*password),
+		Password:       nil,
+		ConnLimit:      64,
+		PeerDiscovery:  true,
+		TrustedSubnets: []*net.IPNet{},
 	}
 
 	name, err := mesh.PeerNameFromString(*hwaddr)
@@ -82,9 +83,13 @@ func main() {
 	}()
 
 	if *side == "recv" {
+		p.Type = core.Server
 		serverRoutine(p)
 	} else if *side == "send" {
+		p.Type = core.Client
 		clientRoutine(p)
+	} else {
+		p.Type = core.Relay
 	}
 
 	logger.Print(<-errs)
@@ -121,18 +126,21 @@ func serverRoutine(p *core.Peer) {
 	// set unordered = true and 10ms treshold for dropping packets
 	//stream.SetReliabilityParams(true, sctp.ReliabilityTypeTimed, 10)
 	stream.SetReliabilityParams(true, sctp.ReliabilityTypeReliable, 0)
-	var pongSeqNum int
+	var pongSeqNum int = 100
 	for {
 		buff := make([]byte, 1024)
+		fmt.Println("before stream.Read")
 		_, err = stream.Read(buff)
+		fmt.Println("after stream.Read", err, buff)
 		if err != nil {
 			log.Panic(err)
 		}
 		pingMsg := string(buff)
 		fmt.Println("received:", pingMsg)
 
-		fmt.Sscanf(pingMsg, "ping %d", &pongSeqNum)
-		pongMsg := fmt.Sprintf("pong %d", pongSeqNum)
+		//fmt.Sscanf(pingMsg, "ping %d", &pongSeqNum)
+		//pongMsg := fmt.Sprintf("pong %d", pongSeqNum)
+		pongMsg := fmt.Sprintf("%d", pongSeqNum)
 		_, err = stream.Write([]byte(pongMsg))
 		if err != nil {
 			log.Panic(err)
