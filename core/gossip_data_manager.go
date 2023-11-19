@@ -71,33 +71,44 @@ func (st *GossipDataManager) Read(fromPeer mesh.PeerName) (result []byte) {
 		})
 	}
 
+	var copiedBuf = make([]byte, 0)
 	val, ok2 := st.Bufs.Load(fromPeer)
 	if !ok2 {
 		panic("no such Peer")
 	}
+	copiedBuf = append(copiedBuf, val.([]byte)...)
 	// clear buffer
 	st.Bufs.Store(fromPeer, make([]byte, 0))
+	//val = val.([]byte)[:0]
 
 	val2, _ := st.Sessions.Load(fromPeer)
 	bufMtx := val2.(*GossipSession).SessMtx
 	bufMtx.Lock()
 	//defer bufMtx.Unlock()
 
-	retBase := val.([]byte)
+	//retBase := val.([]byte)
 	fmt.Println("GossipDataManager.Read called: before checking length of retBase loop.")
-	for len(retBase) == 0 {
-		// wait unitl data received
-		bufMtx.Unlock()
-		time.Sleep(1 * time.Millisecond)
-		bufMtx.Lock()
+	if len(copiedBuf) == 0 {
+		//for len(retBase) == 0 {
+		for storedBuf, _ := st.Bufs.Load(fromPeer); len(storedBuf.([]byte)) == 0; storedBuf, _ = st.Bufs.Load(fromPeer) {
+			// wait unitl data received
+			bufMtx.Unlock()
+			time.Sleep(1 * time.Millisecond)
+			bufMtx.Lock()
+		}
+		storedBuf, _ := st.Bufs.Load(fromPeer)
+		copiedBuf = append(copiedBuf, storedBuf.([]byte)...)
+		st.Bufs.Store(fromPeer, make([]byte, 0))
+		//storedBuf = storedBuf.([]byte)[:0]
 	}
 	fmt.Println("GossipDataManager.Read called: after checking length of retBase loop.")
-	ret := make([]byte, len(retBase))
-	copy(ret, retBase)
+	//ret := make([]byte, len(retBase))
+	//copy(ret, retBase)
 
 	bufMtx.Unlock()
-	fmt.Println("GossipDataManager.Read called: end. fromPeer:", fromPeer, " ret:", ret)
-	return ret
+	fmt.Println("GossipDataManager.Read called: end. fromPeer:", fromPeer, " copiedBuf:", copiedBuf)
+	//return ret
+	return copiedBuf
 }
 
 func (st *GossipDataManager) Write(fromPeer mesh.PeerName, data []byte) []byte {

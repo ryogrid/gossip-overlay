@@ -126,7 +126,7 @@ func serverRoutine(p *core.Peer) {
 	// set unordered = true and 10ms treshold for dropping packets
 	//stream.SetReliabilityParams(true, sctp.ReliabilityTypeTimed, 10)
 	stream.SetReliabilityParams(true, sctp.ReliabilityTypeReliable, 0)
-	var pongSeqNum int = 100
+	var pongSeqNum = 100
 	for {
 		buff := make([]byte, 1024)
 		fmt.Println("before stream.Read")
@@ -146,6 +146,7 @@ func serverRoutine(p *core.Peer) {
 			log.Panic(err)
 		}
 		fmt.Println("sent:", pongMsg)
+		pongSeqNum++
 
 		time.Sleep(time.Second)
 	}
