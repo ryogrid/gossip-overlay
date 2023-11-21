@@ -135,17 +135,20 @@ func serverRoutine(p *core.Peer) {
 		if err != nil {
 			log.Panic(err)
 		}
-		pingMsg := string(buff)
-		fmt.Println("received:", pingMsg)
+		//pingMsg := string(buff)
+		//fmt.Println("received:", pingMsg)
+		fmt.Println("received:", buff[0])
 
 		//fmt.Sscanf(pingMsg, "ping %d", &pongSeqNum)
 		//pongMsg := fmt.Sprintf("pong %d", pongSeqNum)
-		pongMsg := fmt.Sprintf("%d", pongSeqNum)
-		_, err = stream.Write([]byte(pongMsg))
+		//pongMsg := fmt.Sprintf("%d", pongSeqNum)
+		//_, err = stream.Write([]byte(pongMsg))
+		_, err = stream.Write([]byte{byte(pongSeqNum % 255)})
 		if err != nil {
 			log.Panic(err)
 		}
-		fmt.Println("sent:", pongMsg)
+		//fmt.Println("sent:", pongMsg)
+		fmt.Println("sent:", byte(pongSeqNum%255))
 		pongSeqNum++
 
 		time.Sleep(time.Second)
@@ -179,7 +182,8 @@ func clientRoutine(p *core.Peer) {
 	}()
 	fmt.Println("created a client")
 
-	stream, err := a.OpenStream(0, sctp.PayloadTypeWebRTCString)
+	//stream, err := a.OpenStream(0, sctp.PayloadTypeWebRTCString)
+	stream, err := a.OpenStream(0, sctp.PayloadTypeWebRTCBinary)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -197,12 +201,14 @@ func clientRoutine(p *core.Peer) {
 	go func() {
 		var pingSeqNum int
 		for {
-			pingMsg := fmt.Sprintf("ping %d", pingSeqNum)
-			_, err = stream.Write([]byte(pingMsg))
+			//pingMsg := fmt.Sprintf("ping %d", pingSeqNum)
+			//_, err = stream.Write([]byte(pingMsg))
+			_, err = stream.Write([]byte{byte(pingSeqNum % 255)})
 			if err != nil {
 				log.Panic(err)
 			}
-			fmt.Println("sent:", pingMsg)
+			//fmt.Println("sent:", pingMsg)
+			fmt.Println("sent:", pingSeqNum%255)
 
 			pingSeqNum++
 
@@ -216,7 +222,8 @@ func clientRoutine(p *core.Peer) {
 		if err != nil {
 			log.Panic(err)
 		}
-		pongMsg := string(buff)
-		fmt.Println("received:", pongMsg)
+		//pongMsg := string(buff)
+		//fmt.Println("received:", pongMsg)
+		fmt.Println("received:", buff[0])
 	}
 }
