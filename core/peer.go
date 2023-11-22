@@ -151,7 +151,7 @@ func (p *Peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.G
 	if received == nil {
 		p.Logger.Printf("OnGossipBroadcast %s %v => delta %v", src, data, received)
 	} else {
-		p.Logger.Printf("OnGossipBroadcast %s %v => delta %v", src, data, received.(*GossipDataManager).Bufs)
+		p.Logger.Printf("OnGossipBroadcast %s %v => delta %v", src, data, received.(*GossipDataManager).bufs)
 	}
 	return received, nil
 }

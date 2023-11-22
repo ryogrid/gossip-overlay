@@ -15,8 +15,9 @@ type GossipSession struct {
 	RemoteAddress *PeerAddress
 	SessMtx       sync.RWMutex
 	// buffered data is accessed through GossipDM each time
-	GossipDM     *GossipDataManager
-	IsServerSide bool
+	GossipDM *GossipDataManager
+	// used only at client side
+	StreamID uint16
 }
 
 // GossipSetton implements net.Conn
@@ -28,21 +29,29 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	//oc.SessMtx.Lock()
 	//defer oc.SessMtx.Unlock()
 
-	for oc.GossipDM.LastRecvPeer == math.MaxUint64 && oc.GossipDM.Peer.Type == Server {
-		// no message received yet at gosship layer
-		// so can't decide which buffer to read
-		time.Sleep(1 * time.Millisecond)
-	}
+	//TODO: check shared buffer length (server side) or remote peer x stream ID buffer length (client side)
+	//for oc.GossipDM.LastRecvPeer == math.MaxUint64 && oc.GossipDM.Peer.Type == Server {
+	//	// no message received yet at gosship layer
+	//	// so can't decide which buffer to read
+	//	time.Sleep(1 * time.Millisecond)
+	//}
 
-	fmt.Println("after LastRecvPeer value check.")
+	//fmt.Println("after LastRecvPeer value check.")
+	//if oc.RemoteAddress.PeerName == math.MaxUint64 {
+	//	// first message at gosship layer
+	//	// so set src info to oc (server side only)
+	//	fmt.Println("Set Remote PeerName.")
+	//	oc.RemoteAddress.PeerName = oc.GossipDM.LastRecvPeer
+	//}
+
+	var buf []byte
 	if oc.RemoteAddress.PeerName == math.MaxUint64 {
-		// first message at gosship layer
-		// so set src info to oc (server side only)
-		fmt.Println("Set Remote PeerName.")
-		oc.RemoteAddress.PeerName = oc.GossipDM.LastRecvPeer
+		// Assosiation passed this GossipSession has not created Stream yet (server side)
+		buf = oc.GossipDM.Read(math.MaxUint64, math.MaxUint16)
+	} else {
+		buf = oc.GossipDM.Read(oc.RemoteAddress.PeerName, oc.StreamID)
 	}
 
-	buf := oc.GossipDM.Read(oc.RemoteAddress.PeerName)
 	//ret := make([]byte, len(buf))
 	//copy(ret, buf)
 	//b = ret
