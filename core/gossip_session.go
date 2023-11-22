@@ -15,7 +15,8 @@ type GossipSession struct {
 	RemoteAddress *PeerAddress
 	SessMtx       sync.RWMutex
 	// buffered data is accessed through GossipDM each time
-	GossipDM *GossipDataManager
+	GossipDM     *GossipDataManager
+	IsServerSide bool
 }
 
 // GossipSetton implements net.Conn

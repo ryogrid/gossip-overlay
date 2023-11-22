@@ -133,7 +133,8 @@ func serverRoutine(p *core.Peer) {
 		_, err = stream.Read(buff)
 		fmt.Println("after stream.Read", err, buff)
 		if err != nil {
-			log.Panic(err)
+			//log.Panic(err)
+			panic(err)
 		}
 		//pingMsg := string(buff)
 		//fmt.Println("received:", pingMsg)
@@ -145,7 +146,8 @@ func serverRoutine(p *core.Peer) {
 		//_, err = stream.Write([]byte(pongMsg))
 		_, err = stream.Write([]byte{byte(pongSeqNum % 255)})
 		if err != nil {
-			log.Panic(err)
+			//log.Panic(err)
+			panic(err)
 		}
 		//fmt.Println("sent:", pongMsg)
 		fmt.Println("sent:", byte(pongSeqNum%255))
@@ -205,7 +207,8 @@ func clientRoutine(p *core.Peer) {
 			//_, err = stream.Write([]byte(pingMsg))
 			_, err = stream.Write([]byte{byte(pingSeqNum % 255)})
 			if err != nil {
-				log.Panic(err)
+				//log.Panic(err)
+				panic(err)
 			}
 			//fmt.Println("sent:", pingMsg)
 			fmt.Println("sent:", pingSeqNum%255)
@@ -220,7 +223,8 @@ func clientRoutine(p *core.Peer) {
 		buff := make([]byte, 1024)
 		_, err = stream.Read(buff)
 		if err != nil {
-			log.Panic(err)
+			//log.Panic(err)
+			panic(err)
 		}
 		//pongMsg := string(buff)
 		//fmt.Println("received:", pongMsg)
