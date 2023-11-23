@@ -46,7 +46,7 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, destname mesh.PeerName, nic
 
 	actions := make(chan func())
 	p := &Peer{
-		GossipDataMan: NewConnectionDataManager(self),
+		GossipDataMan: NewGossipDataManager(self),
 		Send:          nil, // must .Register() later
 		Actions:       actions,
 		Quit:          make(chan struct{}),

@@ -15,7 +15,8 @@ type GossipSession struct {
 	RemoteAddress *PeerAddress
 	SessMtx       sync.RWMutex
 	// buffered data is accessed through GossipDM each time
-	GossipDM *GossipDataManager
+	GossipDM    *GossipDataManager
+	SessionSide OperationSideAt
 }
 
 // GossipSetton implements net.Conn
@@ -45,9 +46,9 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	var buf []byte
 	if oc.RemoteAddress.PeerName == math.MaxUint64 {
 		// Assosiation passed this GossipSession has not created Stream yet (server side)
-		buf = oc.GossipDM.Read(math.MaxUint64, math.MaxUint16)
+		buf = oc.GossipDM.Read(math.MaxUint64)
 	} else {
-		buf = oc.GossipDM.Read(oc.RemoteAddress.PeerName, oc.StreamID)
+		buf = oc.GossipDM.Read(oc.RemoteAddress.PeerName)
 	}
 
 	//ret := make([]byte, len(buf))
@@ -81,16 +82,16 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 	//oc.SessMtx.Lock()
 	//defer oc.SessMtx.Unlock()
 
-	//oc.GossipDM.WriteToRemote(b)
-	oc.GossipDM.WriteToRemote(oc.RemoteAddress.PeerName, b)
+	//oc.GossipDM.SendToRemote(b)
+	oc.GossipDM.SendToRemote(oc.RemoteAddress.PeerName, b)
 
 	return len(b), nil
 }
 
 // Close closes the conn and releases any Read calls
 func (oc *GossipSession) Close() error {
-	//return oc.pConn.Close()
-	oc.GossipDM.Close(oc.RemoteAddress.PeerName)
+	//return oc.pConn.WhenClose()
+	oc.GossipDM.WhenClose(oc.RemoteAddress.PeerName)
 	return nil
 }
 
