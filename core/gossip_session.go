@@ -1,7 +1,7 @@
 package core
 
 import (
-	"fmt"
+	"github.com/ryogrid/gossip-overlay/util"
 	"math"
 	"net"
 	"sync"
@@ -25,7 +25,7 @@ var _ net.Conn = &GossipSession{}
 
 // Read
 func (oc *GossipSession) Read(b []byte) (n int, err error) {
-	fmt.Println("GossipSession.Read called")
+	util.OverlayDebugPrintln("GossipSession.Read called")
 	//oc.SessMtx.Lock()
 	//defer oc.SessMtx.Unlock()
 
@@ -36,11 +36,11 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	//	time.Sleep(1 * time.Millisecond)
 	//}
 
-	//fmt.Println("after LastRecvPeer value check.")
+	//util.OverlayDebugPrintln("after LastRecvPeer value check.")
 	//if oc.RemoteAddress.PeerName == math.MaxUint64 {
 	//	// first message at gosship layer
 	//	// so set src info to oc (server side only)
-	//	fmt.Println("Set Remote PeerName.")
+	//	util.OverlayDebugPrintln("Set Remote PeerName.")
 	//	oc.RemoteAddress.PeerName = oc.GossipDM.LastRecvPeer
 	//}
 
@@ -72,7 +72,7 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 
 // Write writes len(p) bytes from p to the DTLS connection
 func (oc *GossipSession) Write(b []byte) (n int, err error) {
-	fmt.Println("GossipSession.Write called", b)
+	util.OverlayDebugPrintln("GossipSession.Write called", b)
 
 	////return oc.pConn.WriteTo(p, oc.RemoteAddr())
 	//oc.SessMtx.Lock()
@@ -97,7 +97,7 @@ func (oc *GossipSession) Close() error {
 }
 
 func (oc *GossipSession) LocalAddr() net.Addr {
-	fmt.Println("GossipSession.LocalAddr called", oc.LocalAddress.PeerName)
+	util.OverlayDebugPrintln("GossipSession.LocalAddr called", oc.LocalAddress.PeerName)
 	if oc.LocalAddress != nil {
 		return oc.LocalAddress
 	}
@@ -105,7 +105,7 @@ func (oc *GossipSession) LocalAddr() net.Addr {
 }
 
 func (oc *GossipSession) RemoteAddr() net.Addr {
-	fmt.Println("GossipSession.RemoteAddr called", oc.RemoteAddress.PeerName)
+	util.OverlayDebugPrintln("GossipSession.RemoteAddr called", oc.RemoteAddress.PeerName)
 	if oc.RemoteAddress != nil {
 		return oc.RemoteAddress
 	}
@@ -117,18 +117,18 @@ func (oc *GossipSession) RemoteAddr() net.Addr {
 
 // SetDeadline is a stub
 func (oc *GossipSession) SetDeadline(t time.Time) error {
-	fmt.Println("GossipSession.SetDeadline called", t)
+	util.OverlayDebugPrintln("GossipSession.SetDeadline called", t)
 	return nil
 }
 
 // SetReadDeadline is a stub
 func (oc *GossipSession) SetReadDeadline(t time.Time) error {
-	fmt.Println("GossipSession.SetReadDeadline called", t)
+	util.OverlayDebugPrintln("GossipSession.SetReadDeadline called", t)
 	return nil
 }
 
 // SetWriteDeadline is a stub
 func (oc *GossipSession) SetWriteDeadline(t time.Time) error {
-	fmt.Println("GossipSession.SetWriteDeadline called", t)
+	util.OverlayDebugPrintln("GossipSession.SetWriteDeadline called", t)
 	return nil
 }

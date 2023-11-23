@@ -102,7 +102,7 @@ func serverRoutine(p *core.Peer) {
 		log.Panic(err)
 	}
 	defer conn.Close()
-	fmt.Println("created a udp listener")
+	util.OverlayDebugPrintln("created a udp listener")
 
 	config := sctp.Config{
 		//NetConn:       &disconnectedPacketConn{pConn: conn},
@@ -114,14 +114,14 @@ func serverRoutine(p *core.Peer) {
 		log.Panic(err)
 	}
 	defer a.Close()
-	fmt.Println("created a server")
+	util.OverlayDebugPrintln("created a server")
 
 	stream, err := a.AcceptStream()
 	if err != nil {
 		log.Panic(err)
 	}
 	defer stream.Close()
-	fmt.Println("accepted a stream")
+	util.OverlayDebugPrintln("accepted a stream")
 
 	// set unordered = true and 10ms treshold for dropping packets
 	//stream.SetReliabilityParams(true, sctp.ReliabilityTypeTimed, 10)
@@ -129,15 +129,15 @@ func serverRoutine(p *core.Peer) {
 	var pongSeqNum = 100
 	for {
 		buff := make([]byte, 1024)
-		fmt.Println("before stream.Read")
+		util.OverlayDebugPrintln("before stream.Read")
 		_, err = stream.Read(buff)
-		fmt.Println("after stream.Read", err, buff)
+		util.OverlayDebugPrintln("after stream.Read", err, buff)
 		if err != nil {
 			//log.Panic(err)
 			panic(err)
 		}
 		//pingMsg := string(buff)
-		//fmt.Println("received:", pingMsg)
+		//util.OverlayDebugPrintln("received:", pingMsg)
 		fmt.Println("received:", buff[0])
 
 		//fmt.Sscanf(pingMsg, "ping %d", &pongSeqNum)
@@ -167,7 +167,7 @@ func clientRoutine(p *core.Peer) {
 			panic(err)
 		}
 	}()
-	fmt.Println("dialed udp ponger")
+	util.OverlayDebugPrintln("dialed udp ponger")
 
 	config := sctp.Config{
 		NetConn:       conn,
@@ -182,7 +182,7 @@ func clientRoutine(p *core.Peer) {
 			panic(err)
 		}
 	}()
-	fmt.Println("created a client")
+	util.OverlayDebugPrintln("created a client")
 
 	//stream, err := a.OpenStream(0, sctp.PayloadTypeWebRTCString)
 	stream, err := a.OpenStream(0, sctp.PayloadTypeWebRTCBinary)
@@ -194,7 +194,7 @@ func clientRoutine(p *core.Peer) {
 			panic(err)
 		}
 	}()
-	fmt.Println("opened a stream")
+	util.OverlayDebugPrintln("opened a stream")
 
 	// set unordered = true and 10ms treshold for dropping packets
 	//stream.SetReliabilityParams(true, sctp.ReliabilityTypeTimed, 10)
@@ -210,7 +210,7 @@ func clientRoutine(p *core.Peer) {
 				//log.Panic(err)
 				panic(err)
 			}
-			//fmt.Println("sent:", pingMsg)
+			//util.OverlayDebugPrintln("sent:", pingMsg)
 			fmt.Println("sent:", pingSeqNum%255)
 
 			pingSeqNum++

@@ -3,12 +3,10 @@ package core
 import (
 	"bytes"
 	"encoding/gob"
-	"fmt"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"io/ioutil"
 	"log"
-	"math/rand"
 )
 
 type PeerType int
@@ -95,30 +93,30 @@ func (p *Peer) Register(send mesh.Gossip) {
 	p.Actions <- func() { p.Send = send }
 }
 
-func (p *Peer) ReadPeer(fromPeer mesh.PeerName) []byte {
-	return p.GossipDataMan.Read(fromPeer)
-}
-
-func (p *Peer) WritePeer() (result []byte) {
-	c := make(chan struct{})
-	p.Actions <- func() {
-		defer close(c)
-		val1 := byte(rand.Int31() % 256)
-		val2 := byte(rand.Int31() % 256)
-		//GossipDM := p.GossipDM.WritePeer([]byte{val1, val2})
-		sendData := []byte{val1, val2}
-		if p.Send != nil {
-			//p.Send.GossipBroadcast(GossipDM)
-			fmt.Println("WritePeer", sendData)
-			p.Send.GossipUnicast(p.Destname, sendData)
-		} else {
-			p.Logger.Printf("no sender configured; not broadcasting update right now")
-		}
-		result = []byte{}
-	}
-	<-c
-	return result
-}
+//func (p *Peer) ReadPeer(fromPeer mesh.PeerName) []byte {
+//	return p.GossipDataMan.Read(fromPeer)
+//}
+//
+//func (p *Peer) WritePeer() (result []byte) {
+//	c := make(chan struct{})
+//	p.Actions <- func() {
+//		defer close(c)
+//		val1 := byte(rand.Int31() % 256)
+//		val2 := byte(rand.Int31() % 256)
+//		//GossipDM := p.GossipDM.WritePeer([]byte{val1, val2})
+//		sendData := []byte{val1, val2}
+//		if p.Send != nil {
+//			//p.Send.GossipBroadcast(GossipDM)
+//			util.OverlayDebugPrintln("WritePeer", sendData)
+//			p.Send.GossipUnicast(p.Destname, sendData)
+//		} else {
+//			p.Logger.Printf("no sender configured; not broadcasting update right now")
+//		}
+//		result = []byte{}
+//	}
+//	<-c
+//	return result
+//}
 
 func (p *Peer) Stop() {
 	close(p.Quit)
@@ -126,21 +124,21 @@ func (p *Peer) Stop() {
 
 // Return a copy of our complete GossipDataManager.
 func (p *Peer) Gossip() (complete mesh.GossipData) {
-	fmt.Println("Gossip called")
+	util.OverlayDebugPrintln("Gossip called")
 	return GossipBytes([]byte{})
 }
 
 // Merge the gossiped data represented by buf into our GossipDataManager.
 // Return the GossipDataManager information that was modified.
 func (p *Peer) OnGossip(buf []byte) (delta mesh.GossipData, err error) {
-	fmt.Println("OnGossip called")
+	util.OverlayDebugPrintln("OnGossip called")
 	return GossipBytes(buf), nil
 }
 
 // Merge the gossiped data represented by buf into our GossipDataManager.
 // Return the GossipDataManager information that was modified.
 func (p *Peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.GossipData, err error) {
-	fmt.Println("OnGossipBroadcast called")
+	util.OverlayDebugPrintln("OnGossipBroadcast called")
 	var data []byte
 	if err1 := gob.NewDecoder(bytes.NewReader(buf)).Decode(&data); err != nil {
 		return nil, err1
@@ -158,7 +156,7 @@ func (p *Peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.G
 
 // Merge the gossiped data represented by buf into our GossipDataManager.
 func (p *Peer) OnGossipUnicast(src mesh.PeerName, buf []byte) error {
-	fmt.Println("OnGossipUnicast called")
+	util.OverlayDebugPrintln("OnGossipUnicast called")
 	// decoding is not needed when GossipDataManager is []byte
 	complete := p.GossipDataMan.MergeComplete(p, src, buf)
 	p.Logger.Printf("OnGossipUnicast %s %v => complete %v", src, buf, complete)
