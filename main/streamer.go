@@ -83,13 +83,11 @@ func main() {
 	}()
 
 	if *side == "recv" {
-		p.Type = core.Server
 		serverRoutine(p)
 	} else if *side == "send" {
-		p.Type = core.Client
 		clientRoutine(p)
 	} else {
-		p.Type = core.Relay
+		panic("invalid side")
 	}
 
 	logger.Print(<-errs)
