@@ -16,8 +16,6 @@ type GossipSession struct {
 	SessMtx       sync.RWMutex
 	// buffered data is accessed through GossipDM each time
 	GossipDM *GossipDataManager
-	// used only at client side
-	StreamID uint16
 }
 
 // GossipSetton implements net.Conn

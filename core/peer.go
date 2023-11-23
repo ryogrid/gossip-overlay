@@ -1,8 +1,6 @@
 package core
 
 import (
-	"bytes"
-	"encoding/gob"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"io/ioutil"
@@ -138,27 +136,31 @@ func (p *Peer) OnGossip(buf []byte) (delta mesh.GossipData, err error) {
 // Merge the gossiped data represented by buf into our GossipDataManager.
 // Return the GossipDataManager information that was modified.
 func (p *Peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.GossipData, err error) {
-	util.OverlayDebugPrintln("OnGossipBroadcast called")
-	var data []byte
-	if err1 := gob.NewDecoder(bytes.NewReader(buf)).Decode(&data); err != nil {
-		return nil, err1
-	}
-
-	//received = p.GossipDataMan.MergeReceived(p, src, data)
-	received = p.GossipDataMan.MergeComplete(p, src, data)
-	if received == nil {
-		p.Logger.Printf("OnGossipBroadcast %s %v => delta %v", src, data, received)
-	} else {
-		p.Logger.Printf("OnGossipBroadcast %s %v => delta %v", src, data, received.(*GossipDataManager).bufs)
-	}
-	return received, nil
+	panic("OnGossipBroadcast can not be called now")
+	//util.OverlayDebugPrintln("OnGossipBroadcast called")
+	//var data []byte
+	//if err1 := gob.NewDecoder(bytes.NewReader(buf)).Decode(&data); err != nil {
+	//	return nil, err1
+	//}
+	//
+	////received = p.GossipDataMan.MergeReceived(p, src, data)
+	//received = p.GossipDataMan.MergeComplete(p, src, data)
+	//if received == nil {
+	//	p.Logger.Printf("OnGossipBroadcast %s %v => delta %v", src, data, received)
+	//} else {
+	//	p.Logger.Printf("OnGossipBroadcast %s %v => delta %v", src, data, received.(*GossipDataManager).bufs)
+	//}
+	//return received, nil
 }
 
 // Merge the gossiped data represented by buf into our GossipDataManager.
 func (p *Peer) OnGossipUnicast(src mesh.PeerName, buf []byte) error {
 	util.OverlayDebugPrintln("OnGossipUnicast called")
 	// decoding is not needed when GossipDataManager is []byte
-	complete := p.GossipDataMan.MergeComplete(p, src, buf)
-	p.Logger.Printf("OnGossipUnicast %s %v => complete %v", src, buf, complete)
+	err := p.GossipDataMan.WriteToLocalBuffer(p, src, buf)
+	if err != nil {
+		panic(err)
+	}
+	p.Logger.Printf("OnGossipUnicast %s %v", src, buf)
 	return nil
 }

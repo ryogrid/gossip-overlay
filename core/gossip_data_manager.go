@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"encoding/gob"
-	"fmt"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"math"
@@ -44,7 +43,7 @@ func NewBufferWithMutex(buf []byte) *BufferWithMutex {
 
 type GossipDataManager struct {
 	//// mesh.PeerName -> []byte
-	// "mesh.PeerName-StreamID" -> BufferWithMutex
+	// "mesh.PeerName" -> BufferWithMutex
 	bufs sync.Map
 	Self mesh.PeerName
 	//// mesh.PeerName -> *GossipSession
@@ -74,19 +73,19 @@ func NewConnectionDataManager(selfname mesh.PeerName) *GossipDataManager {
 	}
 }
 
-func (st *GossipDataManager) LoadBuffer(fromPeer mesh.PeerName, streamID uint16) (retBuf *BufferWithMutex, ok bool) {
-	val, ok_ := st.bufs.Load(fromPeer.String() + "-" + fmt.Sprint(streamID))
+func (st *GossipDataManager) LoadBuffer(fromPeer mesh.PeerName) (retBuf *BufferWithMutex, ok bool) {
+	val, ok_ := st.bufs.Load(fromPeer.String())
 	if !ok_ {
 		return nil, false
 	}
 	return val.(*BufferWithMutex), true
 }
 
-func (st *GossipDataManager) StoreBuffer(fromPeer mesh.PeerName, streamID uint16, buf *BufferWithMutex) {
-	st.bufs.Store(fromPeer.String()+"-"+fmt.Sprint(streamID), buf)
+func (st *GossipDataManager) StoreBuffer(fromPeer mesh.PeerName, buf *BufferWithMutex) {
+	st.bufs.Store(fromPeer.String(), buf)
 }
 
-func (st *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16) (result []byte) {
+func (st *GossipDataManager) Read(fromPeer mesh.PeerName) (result []byte) {
 	// TODO: decide buffer with fromPeer and streamID
 
 	util.OverlayDebugPrintln("GossipDataManager.Read called: start. fromPeer:", fromPeer)
@@ -101,7 +100,7 @@ func (st *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16) (resu
 
 	var copiedBuf = make([]byte, 0)
 	//val, ok2 := st.bufs.Load(fromPeer)
-	val, ok2 := st.LoadBuffer(fromPeer, streamID)
+	val, ok2 := st.LoadBuffer(fromPeer)
 	if !ok2 {
 		panic("no such Stream")
 	}
@@ -124,7 +123,7 @@ func (st *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16) (resu
 	if len(copiedBuf) == 0 {
 		//for len(retBase) == 0 {
 		//for storedBuf, _ := st.bufs.Load(fromPeer); len(storedBuf.([]byte)) == 0; storedBuf, _ = st.bufs.Load(fromPeer) {
-		for storedBuf, _ := st.LoadBuffer(fromPeer, streamID); len(storedBuf.Buf) == 0; storedBuf, _ = st.LoadBuffer(fromPeer, streamID) {
+		for storedBuf, _ := st.LoadBuffer(fromPeer); len(storedBuf.Buf) == 0; storedBuf, _ = st.LoadBuffer(fromPeer) {
 			// wait unitl data received
 			//bufMtx.Unlock()
 			val.Mtx.Unlock()
@@ -135,11 +134,11 @@ func (st *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16) (resu
 		//storedBuf, _ := st.bufs.Load(fromPeer)
 		//copiedBuf = append(copiedBuf, storedBuf.([]byte)...)
 		//st.bufs.Store(fromPeer, make([]byte, 0))
-		storedBuf, _ := st.LoadBuffer(fromPeer, streamID)
+		storedBuf, _ := st.LoadBuffer(fromPeer)
 		copiedBuf = append(copiedBuf, storedBuf.Buf...)
 		//st.bufs.Store(fromPeer, make([]byte, 0))
 		storedBuf.Buf = make([]byte, 0)
-		st.StoreBuffer(fromPeer, streamID, storedBuf)
+		st.StoreBuffer(fromPeer, storedBuf)
 		//storedBuf = storedBuf.([]byte)[:0]
 	}
 	util.OverlayDebugPrintln("GossipDataManager.Read called: after checking length of retBase loop.")
@@ -153,8 +152,8 @@ func (st *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16) (resu
 	return copiedBuf
 }
 
-func (st *GossipDataManager) Write(fromPeer mesh.PeerName, streamId uint16, data []byte) []byte {
-	util.OverlayDebugPrintln("GossipDataManager.Write called. fromPeer:", fromPeer, " streamId:", streamId, " data:", data)
+func (st *GossipDataManager) Write(fromPeer mesh.PeerName, data []byte) error {
+	util.OverlayDebugPrintln("GossipDataManager.Write called. fromPeer:", fromPeer, " data:", data)
 
 	//if _, ok := st.bufs.Load(fromPeer); !ok {
 	//	st.Sessions.Store(fromPeer, &GossipSession{
@@ -168,7 +167,7 @@ func (st *GossipDataManager) Write(fromPeer mesh.PeerName, streamId uint16, data
 	var stBufMtx *sync.Mutex
 	var bufWithMtx *BufferWithMutex
 	//if val, ok := st.bufs.Load(fromPeer); ok {
-	if val, ok := st.LoadBuffer(fromPeer, streamId); ok {
+	if val, ok := st.LoadBuffer(fromPeer); ok {
 		bufWithMtx = val
 		stBufMtx = val.Mtx
 		stBufMtx.Lock()
@@ -177,7 +176,7 @@ func (st *GossipDataManager) Write(fromPeer mesh.PeerName, streamId uint16, data
 		stBuf = make([]byte, 0)
 		//st.bufs.Store(fromPeer, stBuf)
 		bufWithMtx = NewBufferWithMutex(stBuf)
-		st.StoreBuffer(fromPeer, streamId, bufWithMtx)
+		st.StoreBuffer(fromPeer, bufWithMtx)
 		stBufMtx = bufWithMtx.Mtx
 		stBufMtx.Lock()
 	}
@@ -193,14 +192,14 @@ func (st *GossipDataManager) Write(fromPeer mesh.PeerName, streamId uint16, data
 	tmpBuf = append(tmpBuf, data...)
 	retBuf = append(retBuf, tmpBuf...)
 	bufWithMtx.Buf = tmpBuf
-	st.StoreBuffer(fromPeer, streamId, bufWithMtx)
+	st.StoreBuffer(fromPeer, bufWithMtx)
 	stBufMtx.Unlock()
 	//st.bufs.Store(fromPeer, tmpBuf)
 
 	//// TODO: temporal impl for server side (not work for multi connection)
 	//st.LastRecvPeer = fromPeer
 
-	return tmpBuf
+	return nil
 }
 
 func (st *GossipDataManager) WriteToRemote(dest mesh.PeerName, data []byte) error {
@@ -248,12 +247,23 @@ func (st *GossipDataManager) MergeReceived(p *Peer, src mesh.PeerName, data []by
 }
 */
 
-func (st *GossipDataManager) MergeComplete(p *Peer, src mesh.PeerName, data []byte) (complete mesh.GossipData) {
+//func (st *GossipDataManager) MergeComplete(p *Peer, src mesh.PeerName, data []byte) (complete mesh.GossipData) {
+//	util.OverlayDebugPrintln("GossipDataManager.MergeComplete called. src:", src, " data:", data)
+//	ret := p.GossipDataMan.Write(src, data)
+//	//ret, _ := p.GossipDataMan.bufs.Load(src)
+//	//return GossipBytes(ret.([]byte))
+//	return GossipBytes(ret)
+//}
+
+func (st *GossipDataManager) WriteToLocalBuffer(p *Peer, src mesh.PeerName, data []byte) error {
 	util.OverlayDebugPrintln("GossipDataManager.MergeComplete called. src:", src, " data:", data)
-	ret := p.GossipDataMan.Write(src, data)
+	err := p.GossipDataMan.Write(src, data)
+	if err != nil {
+		panic(err)
+	}
 	//ret, _ := p.GossipDataMan.bufs.Load(src)
 	//return GossipBytes(ret.([]byte))
-	return GossipBytes(ret)
+	return nil
 }
 
 func (st *GossipDataManager) Close(remotePeer mesh.PeerName) {
