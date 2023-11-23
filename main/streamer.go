@@ -84,8 +84,6 @@ func main() {
 		serverRoutine(p)
 	} else if *side == "send" {
 		clientRoutine(p)
-	} else {
-		panic("invalid side")
 	}
 
 	logger.Print(<-errs)
