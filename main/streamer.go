@@ -94,36 +94,16 @@ func main() {
 }
 
 func serverRoutine(p *core.Peer) {
-	//conn, err := net.ListenUDP("udp", &addr)
-	conn, err := p.GossipDataMan.NewGossipSessionForServer()
+	server, err := core.NewOverlayServer(p)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
-	defer conn.Close()
-	util.OverlayDebugPrintln("created a udp listener")
 
-	config := sctp.Config{
-		//NetConn:       &disconnectedPacketConn{pConn: conn},
-		NetConn:       conn,
-		LoggerFactory: logging.NewDefaultLoggerFactory(),
-	}
-	a, err := sctp.Server(config)
+	stream, err := server.Accept()
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
-	defer a.Close()
-	util.OverlayDebugPrintln("created a server")
 
-	stream, err := a.AcceptStream()
-	if err != nil {
-		log.Panic(err)
-	}
-	defer stream.Close()
-	util.OverlayDebugPrintln("accepted a stream")
-
-	// set unordered = true and 10ms treshold for dropping packets
-	//stream.SetReliabilityParams(true, sctp.ReliabilityTypeTimed, 10)
-	stream.SetReliabilityParams(true, sctp.ReliabilityTypeReliable, 0)
 	var pongSeqNum = 100
 	for {
 		buff := make([]byte, 1024)
