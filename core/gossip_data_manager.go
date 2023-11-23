@@ -17,25 +17,6 @@ const (
 	ClientSide
 )
 
-type GossipBytes []byte
-
-func (buf GossipBytes) Encode() [][]byte {
-	var buf2 bytes.Buffer
-	if err := gob.NewEncoder(&buf2).Encode(buf); err != nil {
-		panic(err)
-	}
-
-	return [][]byte{buf2.Bytes()}
-}
-
-func (buf GossipBytes) Merge(other mesh.GossipData) (complete mesh.GossipData) {
-	retBuf := make([]byte, 0)
-	retBuf = append(retBuf, []byte(buf)...)
-	retBuf = append(retBuf, []byte(other.(GossipBytes))...)
-
-	return GossipBytes(retBuf)
-}
-
 type BufferWithMutex struct {
 	Buf []byte
 	Mtx *sync.Mutex
@@ -49,23 +30,16 @@ func NewBufferWithMutex(buf []byte) *BufferWithMutex {
 }
 
 type GossipDataManager struct {
-	//// mesh.PeerName -> []byte
 	// "mesh.PeerName" -> BufferWithMutex
 	bufs sync.Map
 	Self mesh.PeerName
-	//// mesh.PeerName -> *GossipSession
-	//Sessions     sync.Map
 	Peer *Peer
 	//LastRecvPeer mesh.PeerName // for server
 }
 
-/*
-// GossipDataManager implements GossipData.
-var _ mesh.GossipData = &GossipDataManager{}
-*/
-
-// GossipBytes implements GossipData.
-var _ mesh.GossipData = GossipBytes([]byte{})
+// GossipPacket implements GossipData.
+// var _ mesh.GossipData = GossipPacket([]byte{})
+var _ mesh.GossipData = &GossipPacket{}
 
 // Construct an empty GossipDataManager object, ready to receive updates.
 // This is suitable to use at program start.
@@ -84,7 +58,13 @@ func NewGossipDataManager(selfname mesh.PeerName) *GossipDataManager {
 }
 
 func (st *GossipDataManager) LoadBuffer(fromPeer mesh.PeerName, opSide OperationSideAt) (retBuf *BufferWithMutex, ok bool) {
-	val, ok_ := st.bufs.Load(fromPeer.String())
+	loadPeer := fromPeer
+	if opSide == ServerSide {
+		loadPeer = math.MaxUint64
+	}
+
+	//val, ok_ := st.bufs.Load(fromPeer.String())
+	val, ok_ := st.bufs.Load(loadPeer.String())
 	if !ok_ {
 		return nil, false
 	}
@@ -92,7 +72,12 @@ func (st *GossipDataManager) LoadBuffer(fromPeer mesh.PeerName, opSide Operation
 }
 
 func (st *GossipDataManager) StoreBuffer(fromPeer mesh.PeerName, opSide OperationSideAt, buf *BufferWithMutex) {
-	st.bufs.Store(fromPeer.String(), buf)
+	//st.bufs.Store(fromPeer.String(), buf)
+	storePeer := fromPeer
+	if opSide == ServerSide {
+		storePeer = math.MaxUint64
+	}
+	st.bufs.Store(storePeer.String(), buf)
 }
 
 func (st *GossipDataManager) Read(fromPeer mesh.PeerName, opSide OperationSideAt) (result []byte) {
@@ -248,31 +233,29 @@ func (st *GossipDataManager) Merge(other mesh.GossipData) (complete mesh.GossipD
 	return other
 }
 
-/*
-// Merge the data into our GossipDataManager
-// Return a non-nil mesh.GossipData representation of the received bufs.
-func (st *GossipDataManager) MergeReceived(p *Peer, src mesh.PeerName, data []byte) (received mesh.GossipData) {
-	p.GossipDataMan.Write(src, data)
-	return GossipBytes(data)
-}
-*/
-
-//func (st *GossipDataManager) MergeComplete(p *Peer, src mesh.PeerName, data []byte) (complete mesh.GossipData) {
-//	util.OverlayDebugPrintln("GossipDataManager.MergeComplete called. src:", src, " data:", data)
-//	ret := p.GossipDataMan.Write(src, data)
-//	//ret, _ := p.GossipDataMan.bufs.Load(src)
-//	//return GossipBytes(ret.([]byte))
-//	return GossipBytes(ret)
-//}
-
 func (st *GossipDataManager) WriteToLocalBuffer(p *Peer, src mesh.PeerName, opSide OperationSideAt, data []byte) error {
 	util.OverlayDebugPrintln("GossipDataManager.MergeComplete called. src:", src, " data:", data)
-	err := p.GossipDataMan.Write(src, opSide, data)
-	if err != nil {
-		panic(err)
+	if opSide == ServerSide {
+		// server side uses only one buffer
+		err := p.GossipDataMan.Write(math.MaxUint64, opSide, data)
+		if err != nil {
+			panic(err)
+		}
+	} else if opSide == ClientSide {
+		err := p.GossipDataMan.Write(src, opSide, data)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		panic("invalid opSide")
 	}
+
+	//err := p.GossipDataMan.Write(src, opSide, data)
+	//if err != nil {
+	//	panic(err)
+	//}
 	//ret, _ := p.GossipDataMan.bufs.Load(src)
-	//return GossipBytes(ret.([]byte))
+	//return GossipPacket(ret.([]byte))
 	return nil
 }
 

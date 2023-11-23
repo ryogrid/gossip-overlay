@@ -123,14 +123,16 @@ func (p *Peer) Stop() {
 // Return a copy of our complete GossipDataManager.
 func (p *Peer) Gossip() (complete mesh.GossipData) {
 	util.OverlayDebugPrintln("Gossip called")
-	return GossipBytes([]byte{})
+	//return GossipPacket([]byte{})
+	return GossipPacket{}
 }
 
 // Merge the gossiped data represented by buf into our GossipDataManager.
 // Return the GossipDataManager information that was modified.
 func (p *Peer) OnGossip(buf []byte) (delta mesh.GossipData, err error) {
 	util.OverlayDebugPrintln("OnGossip called")
-	return GossipBytes(buf), nil
+	//return GossipPacket(buf), nil
+	return GossipPacket{}, nil
 }
 
 // Merge the gossiped data represented by buf into our GossipDataManager.
@@ -157,9 +159,19 @@ func (p *Peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.G
 func (p *Peer) OnGossipUnicast(src mesh.PeerName, buf []byte) error {
 	util.OverlayDebugPrintln("OnGossipUnicast called")
 	// decoding is not needed when GossipDataManager is []byte
-	err := p.GossipDataMan.WriteToLocalBuffer(p, src, buf)
+
+	//if err := gob.NewDecoder(bytes.NewReader(buf)).Decode(&set); err != nil {
+	//	return nil, err
+	//}
+	gp, err := DecodeGossipPacket(buf)
 	if err != nil {
 		panic(err)
+	}
+
+	//err2 := p.GossipDataMan.WriteToLocalBuffer(p, src, buf)
+	err2 := p.GossipDataMan.WriteToLocalBuffer(p, src, gp.ReceiverSide, gp.Buf)
+	if err2 != nil {
+		panic(err2)
 	}
 	p.Logger.Printf("OnGossipUnicast %s %v", src, buf)
 	return nil

@@ -44,12 +44,20 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	//}
 
 	var buf []byte
-	if oc.RemoteAddress.PeerName == math.MaxUint64 {
-		// Assosiation passed this GossipSession has not created Stream yet (server side)
-		buf = oc.GossipDM.Read(math.MaxUint64)
+	if oc.SessionSide == ServerSide {
+		buf = oc.GossipDM.Read(math.MaxUint64, ServerSide)
+	} else if oc.SessionSide == ClientSide {
+		buf = oc.GossipDM.Read(oc.RemoteAddress.PeerName, ClientSide)
 	} else {
-		buf = oc.GossipDM.Read(oc.RemoteAddress.PeerName)
+		panic("invalid SessionSide")
 	}
+
+	//if oc.RemoteAddress.PeerName == math.MaxUint64 {
+	//	// Assosiation passed this GossipSession has not created Stream yet (server side)
+	//	buf = oc.GossipDM.Read(math.MaxUint64)
+	//} else {
+	//	buf = oc.GossipDM.Read(oc.RemoteAddress.PeerName)
+	//}
 
 	//ret := make([]byte, len(buf))
 	//copy(ret, buf)
