@@ -28,7 +28,6 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	//oc.SessMtx.Lock()
 	//defer oc.SessMtx.Unlock()
 
-	//TODO: check shared buffer length (server side) or remote peer x stream ID buffer length (client side)
 	//for oc.GossipDM.LastRecvPeer == math.MaxUint64 && oc.GossipDM.Peer.Type == Server {
 	//	// no message received yet at gosship layer
 	//	// so can't decide which buffer to read

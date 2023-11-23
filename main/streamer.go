@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/pion/logging"
-	"github.com/pion/sctp"
 	"github.com/ryogrid/gossip-overlay/core"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
@@ -136,47 +134,15 @@ func serverRoutine(p *core.Peer) {
 }
 
 func clientRoutine(p *core.Peer) {
-	conn, err := p.GossipDataMan.NewGossipSessionForClient(p.Destname)
+	a, err := core.NewOverlayClient(p, p.Destname)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
-	defer func() {
-		if closeErr := conn.Close(); closeErr != nil {
-			panic(err)
-		}
-	}()
-	util.OverlayDebugPrintln("dialed udp ponger")
 
-	config := sctp.Config{
-		NetConn:       conn,
-		LoggerFactory: logging.NewDefaultLoggerFactory(),
+	stream, err2 := a.OpenStream()
+	if err2 != nil {
+		panic(err2)
 	}
-	a, err := sctp.Client(config)
-	if err != nil {
-		log.Panic(err)
-	}
-	defer func() {
-		if closeErr := a.Close(); closeErr != nil {
-			panic(err)
-		}
-	}()
-	util.OverlayDebugPrintln("created a client")
-
-	//stream, err := a.OpenStream(0, sctp.PayloadTypeWebRTCString)
-	stream, err := a.OpenStream(0, sctp.PayloadTypeWebRTCBinary)
-	if err != nil {
-		log.Panic(err)
-	}
-	defer func() {
-		if closeErr := stream.Close(); closeErr != nil {
-			panic(err)
-		}
-	}()
-	util.OverlayDebugPrintln("opened a stream")
-
-	// set unordered = true and 10ms treshold for dropping packets
-	//stream.SetReliabilityParams(true, sctp.ReliabilityTypeTimed, 10)
-	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
 
 	go func() {
 		var pingSeqNum int
