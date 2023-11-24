@@ -13,9 +13,11 @@ type GossipPacket struct {
 }
 
 func (gp GossipPacket) Encode() [][]byte {
-	var buf bytes.Buffer
+	buf := bytes.NewBuffer(nil)
+	//var buf bytes.Buffer
 	//if err := gob.NewEncoder(&buf2).Encode(buf); err != nil {
-	if err := gob.NewEncoder(&buf).Encode(gp); err != nil {
+	//if err := gob.NewEncoder(&buf).Encode(gp); err != nil {
+	if err := gob.NewEncoder(buf).Encode(&gp); err != nil {
 		panic(err)
 	}
 
@@ -39,7 +41,9 @@ func (gp GossipPacket) Merge(other mesh.GossipData) (complete mesh.GossipData) {
 
 func DecodeGossipPacket(buf []byte) (*GossipPacket, error) {
 	var gp GossipPacket
-	if err := gob.NewDecoder(bytes.NewReader(buf)).Decode(&gp); err != nil {
+	//if err := gob.NewDecoder(bytes.NewReader(buf)).Decode(&gp); err != nil {
+	decBuf := bytes.NewBuffer(buf)
+	if err := gob.NewDecoder(decBuf).Decode(&gp); err != nil {
 		return nil, err
 	}
 

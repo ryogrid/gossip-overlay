@@ -31,10 +31,10 @@ func NewBufferWithMutex(buf []byte) *BufferWithMutex {
 
 type GossipDataManager struct {
 	// "mesh.PeerName" -> BufferWithMutex
-	bufs sync.Map
-	Self mesh.PeerName
-	Peer *Peer
-	//LastRecvPeer mesh.PeerName // for server
+	bufs         sync.Map
+	Self         mesh.PeerName
+	Peer         *Peer
+	LastRecvPeer mesh.PeerName // for server
 }
 
 // GossipPacket implements GossipData.
@@ -49,8 +49,8 @@ func NewGossipDataManager(selfname mesh.PeerName) *GossipDataManager {
 		bufs: sync.Map{},
 		Self: selfname,
 		//Sessions:     sync.Map{},
-		Peer: nil,
-		//LastRecvPeer: math.MaxUint64,
+		Peer:         nil,
+		LastRecvPeer: math.MaxUint64,
 	}
 	// initialize shared buffer for server side (not used on client side)
 	ret.Write(math.MaxUint64, ServerSide, []byte{})
@@ -194,7 +194,7 @@ func (gdm *GossipDataManager) Write(fromPeer mesh.PeerName, opSide OperationSide
 	return nil
 }
 
-func (gdm *GossipDataManager) SendToRemote(dest mesh.PeerName, data []byte) error {
+func (gdm *GossipDataManager) SendToRemote(dest mesh.PeerName, localOpSide OperationSideAt, data []byte) error {
 	util.OverlayDebugPrintln("GossipDataManager.SendToRemote called. dest:", dest, " data:", data)
 	c := make(chan struct{})
 	gdm.Peer.Actions <- func() {
@@ -203,7 +203,17 @@ func (gdm *GossipDataManager) SendToRemote(dest mesh.PeerName, data []byte) erro
 			//p.Send.GossipBroadcast(GossipDM)
 			//util.OverlayDebugPrintln("SendToRemote", data)
 			//st.Peer.Send.GossipUnicast(st.Peer.Destname, data)
-			gdm.Peer.Send.GossipUnicast(dest, data)
+			recvOpSide := ServerSide
+			if localOpSide == ServerSide {
+				recvOpSide = ClientSide
+			}
+			sendObj := GossipPacket{
+				Buf:          data,
+				ReceiverSide: recvOpSide,
+			}
+			encodedData := sendObj.Encode()[0]
+			//gdm.Peer.Send.GossipUnicast(dest, data)
+			gdm.Peer.Send.GossipUnicast(dest, encodedData)
 		} else {
 			gdm.Peer.Logger.Printf("no sender configured; not broadcasting update right now")
 		}
@@ -233,6 +243,7 @@ func (gdm *GossipDataManager) Merge(other mesh.GossipData) (complete mesh.Gossip
 func (gdm *GossipDataManager) WriteToLocalBuffer(p *Peer, src mesh.PeerName, opSide OperationSideAt, data []byte) error {
 	util.OverlayDebugPrintln("GossipDataManager.MergeComplete called. src:", src, " data:", data)
 	if opSide == ServerSide {
+		gdm.LastRecvPeer = src
 		// server side uses only one buffer
 		err := p.GossipDataMan.Write(math.MaxUint64, opSide, data)
 		if err != nil {

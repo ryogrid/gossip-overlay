@@ -90,7 +90,13 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 	//defer oc.SessMtx.Unlock()
 
 	//oc.GossipDM.SendToRemote(b)
-	oc.GossipDM.SendToRemote(oc.RemoteAddress.PeerName, b)
+	if oc.RemoteAddress.PeerName != math.MaxUint64 {
+		oc.GossipDM.SendToRemote(oc.RemoteAddress.PeerName, oc.SessionSide, b)
+	} else {
+		// server side uses LastRecvPeer until Stream is established
+		// because remote peer name can't be known until then
+		oc.GossipDM.SendToRemote(oc.GossipDM.LastRecvPeer, oc.SessionSide, b)
+	}
 
 	return len(b), nil
 }
