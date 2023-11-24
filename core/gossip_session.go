@@ -27,22 +27,6 @@ var _ net.Conn = &GossipSession{}
 // Read
 func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	util.OverlayDebugPrintln("GossipSession.Read called")
-	//oc.SessMtx.Lock()
-	//defer oc.SessMtx.Unlock()
-
-	//for oc.GossipDM.LastRecvPeer == math.MaxUint64 && oc.GossipDM.Peer.Type == Server {
-	//	// no message received yet at gosship layer
-	//	// so can't decide which buffer to read
-	//	time.Sleep(1 * time.Millisecond)
-	//}
-
-	//util.OverlayDebugPrintln("after LastRecvPeer value check.")
-	//if oc.RemoteAddresses.PeerName == math.MaxUint64 {
-	//	// first message at gosship layer
-	//	// so set src info to oc (server side only)
-	//	util.OverlayDebugPrintln("Set Remote PeerName.")
-	//	oc.RemoteAddresses.PeerName = oc.GossipDM.LastRecvPeer
-	//}
 
 	var buf []byte
 	if oc.SessionSide == ServerSide {
@@ -55,47 +39,15 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	} else {
 		panic("invalid SessionSide")
 	}
-
-	//if oc.RemoteAddresses.PeerName == math.MaxUint64 {
-	//	// Assosiation passed this GossipSession has not created Stream yet (server side)
-	//	buf = oc.GossipDM.Read(math.MaxUint64)
-	//} else {
-	//	buf = oc.GossipDM.Read(oc.RemoteAddresses.PeerName)
-	//}
-
-	//ret := make([]byte, len(buf))
-	//copy(ret, buf)
-	//b = ret
 	copy(b, buf)
 
 	return len(buf), nil
-
-	//i, rAddr, err := oc.pConn.ReadFrom(p)
-	//if err != nil {
-	//	return 0, err
-	//}
-	//oc.SessMtx.Lock()
-	//oc.rAddr = rAddr
-	//oc.SessMtx.Unlock()
-	//
-	//return i, err
 }
 
 // Write writes len(p) bytes from p to the DTLS connection
 func (oc *GossipSession) Write(b []byte) (n int, err error) {
 	util.OverlayDebugPrintln("GossipSession.Write called", b)
 
-	////return oc.pConn.WriteTo(p, oc.RemoteAddr())
-	//oc.SessMtx.Lock()
-	//defer oc.SessMtx.Unlock()
-	//oc.GossipDM.Write(oc.RemoteAddresses.PeerName, b)
-	//return len(b), nil
-
-	//oc.SessMtx.Lock()
-	//defer oc.SessMtx.Unlock()
-
-	//oc.GossipDM.SendToRemote(b)
-	//if oc.RemoteAddresses.PeerName != math.MaxUint64 {
 	if len(oc.RemoteAddresses) > 0 {
 		peerNames := make([]mesh.PeerName, 0)
 		oc.RemoteAddressesMtx.Lock()
@@ -113,7 +65,6 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 		for _, peerName := range peerNames {
 			oc.GossipDM.SendToRemote(peerName, oc.SessionSide, b)
 		}
-		//oc.GossipDM.SendToRemote(oc.RemoteAddresses.PeerName, oc.SessionSide, b)
 	} else {
 		// server side uses LastRecvPeer until Stream is established
 		// because remote peer name can't be known until then
@@ -125,7 +76,6 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 
 // Close closes the conn and releases any Read calls
 func (oc *GossipSession) Close() error {
-	//return oc.pConn.WhenClose()
 	oc.RemoteAddressesMtx.Lock()
 	peerNames := make([]mesh.PeerName, 0)
 	oc.RemoteAddressesMtx.Unlock()
@@ -134,7 +84,6 @@ func (oc *GossipSession) Close() error {
 	}
 	oc.RemoteAddressesMtx.Unlock()
 
-	//oc.GossipDM.WhenClose(oc.RemoteAddresses.PeerName)
 	return nil
 }
 
@@ -148,18 +97,12 @@ func (oc *GossipSession) LocalAddr() net.Addr {
 
 func (oc *GossipSession) RemoteAddr() net.Addr {
 	util.OverlayDebugPrintln("GossipSession.RemoteAddr called")
-	//if oc.RemoteAddresses != nil {
-	//	return oc.RemoteAddresses
-	//}
 	oc.RemoteAddressesMtx.Lock()
 	defer oc.RemoteAddressesMtx.Unlock()
 	if len(oc.RemoteAddresses) > 0 {
 		return oc.RemoteAddresses[0]
 	}
 	return nil
-	//oc.SessMtx.RLock()
-	//defer oc.SessMtx.RUnlock()
-	//return oc.RemoteAddresses
 }
 
 // SetDeadline is a stub

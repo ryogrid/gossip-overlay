@@ -23,9 +23,8 @@ func main() {
 		meshListen = flag.String("mesh", net.JoinHostPort("0.0.0.0", strconv.Itoa(mesh.Port)), "mesh listen address")
 		hwaddr     = flag.String("hwaddr", util.MustHardwareAddr(), "MAC address, i.e. mesh Peer ID")
 		nickname   = flag.String("nickname", util.MustHostname(), "Peer nickname")
-		//password   = flag.String("password", "", "password (optional)")
-		channel  = flag.String("channel", "default", "gossip channel name")
-		destname = flag.String("destname", "", "destination Peer name (optional)")
+		channel    = flag.String("channel", "default", "gossip channel name")
+		destname   = flag.String("destname", "", "destination Peer name (optional)")
 	)
 	flag.Var(peers, "peer", "initial Peer (may be repeated)")
 	flag.Parse()
@@ -44,12 +43,11 @@ func main() {
 	meshConf := mesh.Config{
 		Host:               host,
 		Port:               port,
-		ProtocolMinVersion: mesh.ProtocolMaxVersion, //mesh.ProtocolMinVersion,
-		//Password:           []byte(*password),
-		Password:       nil,
-		ConnLimit:      64,
-		PeerDiscovery:  true,
-		TrustedSubnets: []*net.IPNet{},
+		ProtocolMinVersion: mesh.ProtocolMaxVersion,
+		Password:           nil,
+		ConnLimit:          64,
+		PeerDiscovery:      true,
+		TrustedSubnets:     []*net.IPNet{},
 	}
 
 	name, err := mesh.PeerNameFromString(*hwaddr)
@@ -111,20 +109,13 @@ func serverRoutine(p *core.Peer) {
 			//log.Panic(err)
 			panic(err)
 		}
-		//pingMsg := string(buff)
-		//util.OverlayDebugPrintln("received:", pingMsg)
 		fmt.Println("received:", buff[0])
 
-		//fmt.Sscanf(pingMsg, "ping %d", &pongSeqNum)
-		//pongMsg := fmt.Sprintf("pong %d", pongSeqNum)
-		//pongMsg := fmt.Sprintf("%d", pongSeqNum)
-		//_, err = stream.Write([]byte(pongMsg))
 		_, err = stream.Write([]byte{byte(pongSeqNum % 255)})
 		if err != nil {
 			//log.Panic(err)
 			panic(err)
 		}
-		//fmt.Println("sent:", pongMsg)
 		fmt.Println("sent:", byte(pongSeqNum%255))
 		pongSeqNum++
 
@@ -146,14 +137,11 @@ func clientRoutine(p *core.Peer) {
 	go func() {
 		var pingSeqNum int
 		for {
-			//pingMsg := fmt.Sprintf("ping %d", pingSeqNum)
-			//_, err = stream.Write([]byte(pingMsg))
 			_, err = stream.Write([]byte{byte(pingSeqNum % 255)})
 			if err != nil {
 				//log.Panic(err)
 				panic(err)
 			}
-			//util.OverlayDebugPrintln("sent:", pingMsg)
 			fmt.Println("sent:", pingSeqNum%255)
 
 			pingSeqNum++
@@ -169,8 +157,6 @@ func clientRoutine(p *core.Peer) {
 			//log.Panic(err)
 			panic(err)
 		}
-		//pongMsg := string(buff)
-		//fmt.Println("received:", pongMsg)
 		fmt.Println("received:", buff[0])
 	}
 }

@@ -50,11 +50,6 @@ func (oc *OverlayClient) PrepareNewClientObj(remotePeer mesh.PeerName) error {
 		return err
 	}
 	oc.GossipSession = conn
-	//defer func() {
-	//	if closeErr := conn.Close(); closeErr != nil {
-	//		panic(err)
-	//	}
-	//}()
 	util.OverlayDebugPrintln("dialed gossip session")
 
 	config := sctp.Config{
@@ -69,11 +64,6 @@ func (oc *OverlayClient) PrepareNewClientObj(remotePeer mesh.PeerName) error {
 
 	oc.OriginalClientObj = a
 
-	//defer func() {
-	//	if closeErr := a.Close(); closeErr != nil {
-	//		panic(err)
-	//	}
-	//}()
 	util.OverlayDebugPrintln("created a client")
 
 	return nil
@@ -90,15 +80,8 @@ func (oc *OverlayClient) OpenStream() (*sctp.Stream, error) {
 		return nil, err
 	}
 	oc.Stream = stream
-	//defer func() {
-	//	if closeErr := stream.Close(); closeErr != nil {
-	//		panic(err)
-	//	}
-	//}()
 	util.OverlayDebugPrintln("opened a stream")
 
-	// set unordered = true and 10ms treshold for dropping packets
-	//stream.SetReliabilityParams(true, sctp.ReliabilityTypeTimed, 10)
 	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
 
 	// write my PeerName (this is internal protocol of gossip-overlay)
