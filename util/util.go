@@ -1,6 +1,8 @@
 package util
 
 import (
+	"fmt"
+	"github.com/ryogrid/gossip-overlay/overlay_setting"
 	"net"
 	"os"
 	"sort"
@@ -46,4 +48,10 @@ func MustHostname() string {
 		panic(err)
 	}
 	return hostname
+}
+
+func OverlayDebugPrintln(a ...interface{}) {
+	if overlay_setting.OVERLAY_DEBUG {
+		fmt.Println(a)
+	}
 }
