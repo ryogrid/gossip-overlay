@@ -156,7 +156,17 @@ func (gdm *GossipDataManager) SendToRemote(dest mesh.PeerName, localOpSide Opera
 				ReceiverSide: recvOpSide,
 			}
 			encodedData := sendObj.Encode()[0]
-			gdm.Peer.Send.GossipUnicast(dest, encodedData)
+			for {
+				err := gdm.Peer.Send.GossipUnicast(dest, encodedData)
+				if err == nil {
+					break
+				} else {
+					// TODO: need to implement timeout
+					util.OverlayDebugPrintln("GossipDataManager.SendToRemote: err:", err)
+					util.OverlayDebugPrintln("GossipDataManager.SendToRemote: 1sec wait and do retry")
+					time.Sleep(1 * time.Second)
+				}
+			}
 		} else {
 			gdm.Peer.Logger.Printf("no sender configured; not broadcasting update right now")
 		}
