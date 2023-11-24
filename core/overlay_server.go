@@ -48,9 +48,9 @@ func decodeUint64FromBytes(buf []byte) uint64 {
 
 func (os *OverlayServer) Accept() (*sctp.Stream, error) {
 	os.OriginalServerObjsMtx.Lock()
-	defer os.OriginalServerObjsMtx.Unlock()
-
-	stream, err := os.OriginalServerObjs[0].AcceptStream()
+	orgServObj := os.OriginalServerObjs[len(os.OriginalServerObjs)-1]
+	os.OriginalServerObjsMtx.Unlock()
+	stream, err := orgServObj.AcceptStream()
 	if err != nil {
 		log.Panic(err)
 	}
@@ -65,23 +65,31 @@ func (os *OverlayServer) Accept() (*sctp.Stream, error) {
 	os.Streams = append(os.Streams, stream)
 	os.StreamsMtx.Unlock()
 
+	util.OverlayDebugPrintln("before read remote PeerName from stream")
 	var buf [8]byte
 	// read PeerName of remote peer (this is internal protocol of gossip-overlay)
 	_, err = stream.Read(buf[:])
 	if err != nil {
 		fmt.Println("err:", err)
 	}
+	util.OverlayDebugPrintln("after read remote PeerName from stream buf:", buf)
 
 	decodedName := decodeUint64FromBytes(buf[:])
 	remotePeerName := mesh.PeerName(decodedName)
+	util.OverlayDebugPrintln("remotePeerName from stream: ", remotePeerName)
 	os.GossipSessionsMtx.Lock()
 	conn := os.GossipSessions[len(os.GossipSessions)-1]
 	os.GossipSessionsMtx.Unlock()
 	conn.RemoteAddress.PeerName = remotePeerName
 
+	util.OverlayDebugPrintln("before call of os.PrepareNewServerObj remote at OverlayServer.Accept")
+
 	// setup OriginalServerObj for next stream (Accept call)
 	os.PrepareNewServerObj()
 
+	util.OverlayDebugPrintln("after call of os.PrepareNewServerObj remote at OverlayServer.Accept")
+
+	util.OverlayDebugPrintln("end of OverlayServer.Accept")
 	return stream, nil
 }
 
