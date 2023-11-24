@@ -95,7 +95,8 @@ func serverRoutine(p *core.Peer) {
 		panic(err)
 	}
 
-	stream, err := server.Accept()
+	stream, remotePeer, err := server.Accept()
+	fmt.Println("stream accepted from ", remotePeer)
 	if err != nil {
 		panic(err)
 	}

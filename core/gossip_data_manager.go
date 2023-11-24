@@ -85,7 +85,7 @@ func (gdm *GossipDataManager) Read(fromPeer mesh.PeerName, opSide OperationSideA
 	//if _, ok := st.Sessions.Load(fromPeer); !ok {
 	//	st.Sessions.Store(fromPeer, &GossipSession{
 	//		LocalAddress:  &PeerAddress{st.Self},
-	//		RemoteAddress: &PeerAddress{fromPeer},
+	//		RemoteAddresses: &PeerAddress{fromPeer},
 	//		SessMtx:       sync.RWMutex{},
 	//		GossipDM:      st,
 	//	})
@@ -151,7 +151,7 @@ func (gdm *GossipDataManager) Write(fromPeer mesh.PeerName, opSide OperationSide
 	//if _, ok := st.bufs.Load(fromPeer); !ok {
 	//	st.Sessions.Store(fromPeer, &GossipSession{
 	//		LocalAddress:  &PeerAddress{st.Self},
-	//		RemoteAddress: &PeerAddress{fromPeer},
+	//		RemoteAddresses: &PeerAddress{fromPeer},
 	//		SessMtx:       sync.RWMutex{},
 	//		GossipDM:      st,
 	//	})
@@ -276,11 +276,12 @@ func (gdm *GossipDataManager) WhenClose(remotePeer mesh.PeerName) {
 
 func (gdm *GossipDataManager) NewGossipSessionForClient(remotePeer mesh.PeerName) (*GossipSession, error) {
 	ret := &GossipSession{
-		LocalAddress:  &PeerAddress{gdm.Self},
-		RemoteAddress: &PeerAddress{remotePeer},
-		SessMtx:       sync.RWMutex{},
-		GossipDM:      gdm,
-		SessionSide:   ClientSide,
+		LocalAddress:       &PeerAddress{gdm.Self},
+		RemoteAddresses:    []*PeerAddress{&PeerAddress{remotePeer}},
+		RemoteAddressesMtx: &sync.Mutex{},
+		SessMtx:            sync.RWMutex{},
+		GossipDM:           gdm,
+		SessionSide:        ClientSide,
 	}
 	if _, ok := gdm.LoadBuffer(remotePeer, ClientSide); !ok {
 		gdm.StoreBuffer(remotePeer, ClientSide, NewBufferWithMutex(make([]byte, 0)))
@@ -291,11 +292,13 @@ func (gdm *GossipDataManager) NewGossipSessionForClient(remotePeer mesh.PeerName
 
 func (gdm *GossipDataManager) NewGossipSessionForServer() (*GossipSession, error) {
 	ret := &GossipSession{
-		LocalAddress:  &PeerAddress{gdm.Self},
-		RemoteAddress: &PeerAddress{math.MaxUint64},
-		SessMtx:       sync.RWMutex{},
-		GossipDM:      gdm,
-		SessionSide:   ServerSide,
+		LocalAddress: &PeerAddress{gdm.Self},
+		//RemoteAddresses: &PeerAddress{math.MaxUint64},
+		RemoteAddresses:    make([]*PeerAddress, 0),
+		RemoteAddressesMtx: &sync.Mutex{},
+		SessMtx:            sync.RWMutex{},
+		GossipDM:           gdm,
+		SessionSide:        ServerSide,
 	}
 
 	return ret, nil

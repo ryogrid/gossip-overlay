@@ -14,28 +14,29 @@ import (
 
 // wrapper of sctp.Server
 type OverlayServer struct {
-	P                     *Peer
-	OriginalServerObjs    []*sctp.Association
-	OriginalServerObjsMtx *sync.Mutex
-	Streams               []*sctp.Stream
-	StreamsMtx            *sync.Mutex
-	GossipSessions        []*GossipSession
-	GossipSessionsMtx     *sync.Mutex
+	P                 *Peer
+	OriginalServerObj *sctp.Association
+	//OriginalServerObjsMtx *sync.Mutex
+	Streams       []*sctp.Stream
+	StreamsMtx    *sync.Mutex
+	gossipSession *GossipSession
+	//GossipSessionsMtx *sync.Mutex
 }
 
 func NewOverlayServer(p *Peer) (*OverlayServer, error) {
 	ret := &OverlayServer{
 		P: p,
 		// active object is last elem
-		OriginalServerObjs:    make([]*sctp.Association, 0),
-		OriginalServerObjsMtx: &sync.Mutex{},
-		Streams:               make([]*sctp.Stream, 0),
-		StreamsMtx:            &sync.Mutex{},
-		GossipSessions:        make([]*GossipSession, 0),
-		GossipSessionsMtx:     &sync.Mutex{},
+		OriginalServerObj: nil,
+		//OriginalServerObjsMtx: &sync.Mutex{},
+		Streams:    make([]*sctp.Stream, 0),
+		StreamsMtx: &sync.Mutex{},
+		//gossipSession: make([]*GossipSession, 0),
+		gossipSession: nil,
+		//GossipSessionsMtx:     &sync.Mutex{},
 	}
 
-	err := ret.PrepareNewServerObj()
+	err := ret.InitInternalServerObj()
 	return ret, err
 
 }
@@ -46,11 +47,12 @@ func decodeUint64FromBytes(buf []byte) uint64 {
 	return ret
 }
 
-func (os *OverlayServer) Accept() (*sctp.Stream, error) {
-	os.OriginalServerObjsMtx.Lock()
-	orgServObj := os.OriginalServerObjs[len(os.OriginalServerObjs)-1]
-	os.OriginalServerObjsMtx.Unlock()
-	stream, err := orgServObj.AcceptStream()
+func (os *OverlayServer) Accept() (*sctp.Stream, mesh.PeerName, error) {
+	//os.OriginalServerObjsMtx.Lock()
+	//orgServObj := os.OriginalServerObj[len(os.OriginalServerObj)-1]
+	//os.OriginalServerObjsMtx.Unlock()
+	//stream, err := orgServObj.AcceptStream()
+	stream, err := os.OriginalServerObj.AcceptStream()
 	if err != nil {
 		log.Panic(err)
 	}
@@ -77,23 +79,24 @@ func (os *OverlayServer) Accept() (*sctp.Stream, error) {
 	decodedName := decodeUint64FromBytes(buf[:])
 	remotePeerName := mesh.PeerName(decodedName)
 	util.OverlayDebugPrintln("remotePeerName from stream: ", remotePeerName)
-	os.GossipSessionsMtx.Lock()
-	conn := os.GossipSessions[len(os.GossipSessions)-1]
-	os.GossipSessionsMtx.Unlock()
-	conn.RemoteAddress.PeerName = remotePeerName
+	//os.GossipSessionsMtx.Lock()
+	//conn := os.gossipSession[len(os.gossipSession)-1]
+	//os.GossipSessionsMtx.Unlock()
+	//conn.RemoteAddresses.PeerName = remotePeerName
 
-	util.OverlayDebugPrintln("before call of os.PrepareNewServerObj remote at OverlayServer.Accept")
+	//os.gossipSession.RemoteAddresses.PeerName = remotePeerName
+	os.gossipSession.RemoteAddressesMtx.Lock()
+	os.gossipSession.RemoteAddresses = append(os.gossipSession.RemoteAddresses, &PeerAddress{remotePeerName})
+	os.gossipSession.RemoteAddressesMtx.Unlock()
 
-	// setup OriginalServerObj for next stream (Accept call)
-	os.PrepareNewServerObj()
-
-	util.OverlayDebugPrintln("after call of os.PrepareNewServerObj remote at OverlayServer.Accept")
+	//// setup OriginalServerObj for next stream (Accept call)
+	//os.InitInternalServerObj()
 
 	util.OverlayDebugPrintln("end of OverlayServer.Accept")
-	return stream, nil
+	return stream, remotePeerName, nil
 }
 
-func (os *OverlayServer) PrepareNewServerObj() error {
+func (os *OverlayServer) InitInternalServerObj() error {
 	//conn, err := net.ListenUDP("udp", &addr)
 	conn, err := os.P.GossipDataMan.NewGossipSessionForServer()
 	if err != nil {
@@ -113,37 +116,43 @@ func (os *OverlayServer) PrepareNewServerObj() error {
 	//defer a.Close()
 	util.OverlayDebugPrintln("created a server")
 
-	os.GossipSessionsMtx.Lock()
-	os.GossipSessions = append(os.GossipSessions, conn)
-	os.GossipSessionsMtx.Unlock()
+	//os.GossipSessionsMtx.Lock()
+	//os.gossipSession = append(os.gossipSession, conn)
+	//os.GossipSessionsMtx.Unlock()
+	os.gossipSession = conn
 
-	os.OriginalServerObjsMtx.Lock()
-	os.OriginalServerObjs = append(os.OriginalServerObjs, a)
-	os.OriginalServerObjsMtx.Unlock()
+	//os.OriginalServerObjsMtx.Lock()
+	//os.OriginalServerObj = append(os.OriginalServerObj, a)
+	//os.OriginalServerObjsMtx.Unlock()
+	os.OriginalServerObj = a
 
 	return nil
 }
 
 func (os *OverlayServer) Close() error {
-	os.GossipSessionsMtx.Lock()
-	for _, s := range os.GossipSessions {
-		s.Close()
-	}
-	os.GossipSessions = make([]*GossipSession, 0)
-	os.GossipSessionsMtx.Unlock()
-
-	os.OriginalServerObjsMtx.Lock()
-	for _, s := range os.OriginalServerObjs {
-		s.Close()
-	}
-	os.OriginalServerObjs = make([]*sctp.Association, 0)
-	os.OriginalServerObjsMtx.Unlock()
-
+	//os.GossipSessionsMtx.Lock()
+	//for _, s := range os.gossipSession {
+	//	s.Close()
+	//}
+	//os.gossipSession = make([]*GossipSession, 0)
+	//os.GossipSessionsMtx.Unlock()
+	//
+	//os.OriginalServerObjsMtx.Lock()
+	//for _, s := range os.OriginalServerObj {
+	//	s.Close()
+	//}
+	//os.OriginalServerObj = make([]*sctp.Association, 0)
+	//os.OriginalServerObjsMtx.Unlock()
+	os.gossipSession.Close()
+	os.gossipSession = nil
+	os.OriginalServerObj.Close()
+	os.OriginalServerObj = nil
 	os.StreamsMtx.Lock()
 	for _, s := range os.Streams {
 		s.Close()
 	}
-	os.Streams = make([]*sctp.Stream, 0)
+	//os.Streams = make([]*sctp.Stream, 0)
+	os.Streams = nil
 	os.StreamsMtx.Unlock()
 
 	return nil
