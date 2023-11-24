@@ -3,7 +3,7 @@
 - Bi-directional reliable stream I/F which hides peers on gossip protcol layer with SCTP can be used
 - Any centralized server is not needed
 - TCP socket programming style interface (system architecture like a server and clients can be implemented) 
-- Mathines on having NAT network can join overlay network
+- Machines on network having NAT can join
 
 ## Build
 $ go build main/streamer.go
@@ -23,8 +23,6 @@ $ ./streamer -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -peer 
 
 Network Topology:  
 - Peer-b <-> Peer-a <-> Peer-c 
-  - In general, Node-b and Node-c may have direct TCP connection between these if there are no blocker such as NAT
-  - In this example, it is not strange that the connection exists but it depends on design of mesh lib and I haven't confirmed it yet...
 
 ## TODO
 - [gist (in Japanese)](https://gist.github.com/ryogrid/e78088bc531bc62c10eba1c0d0e0b7fc)
