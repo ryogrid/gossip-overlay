@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/pion/logging"
-	"github.com/pion/sctp"
 	"github.com/ryogrid/gossip-overlay/core"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
@@ -25,9 +23,8 @@ func main() {
 		meshListen = flag.String("mesh", net.JoinHostPort("0.0.0.0", strconv.Itoa(mesh.Port)), "mesh listen address")
 		hwaddr     = flag.String("hwaddr", util.MustHardwareAddr(), "MAC address, i.e. mesh Peer ID")
 		nickname   = flag.String("nickname", util.MustHostname(), "Peer nickname")
-		//password   = flag.String("password", "", "password (optional)")
-		channel  = flag.String("channel", "default", "gossip channel name")
-		destname = flag.String("destname", "", "destination Peer name (optional)")
+		channel    = flag.String("channel", "default", "gossip channel name")
+		destname   = flag.String("destname", "", "destination Peer name (optional)")
 	)
 	flag.Var(peers, "peer", "initial Peer (may be repeated)")
 	flag.Parse()
@@ -46,12 +43,11 @@ func main() {
 	meshConf := mesh.Config{
 		Host:               host,
 		Port:               port,
-		ProtocolMinVersion: mesh.ProtocolMaxVersion, //mesh.ProtocolMinVersion,
-		//Password:           []byte(*password),
-		Password:       nil,
-		ConnLimit:      64,
-		PeerDiscovery:  true,
-		TrustedSubnets: []*net.IPNet{},
+		ProtocolMinVersion: mesh.ProtocolMaxVersion,
+		Password:           nil,
+		ConnLimit:          64,
+		PeerDiscovery:      true,
+		TrustedSubnets:     []*net.IPNet{},
 	}
 
 	name, err := mesh.PeerNameFromString(*hwaddr)
@@ -83,69 +79,44 @@ func main() {
 	}()
 
 	if *side == "recv" {
-		p.Type = core.Server
 		serverRoutine(p)
 	} else if *side == "send" {
-		p.Type = core.Client
 		clientRoutine(p)
-	} else {
-		p.Type = core.Relay
 	}
 
 	logger.Print(<-errs)
 }
 
 func serverRoutine(p *core.Peer) {
-	//conn, err := net.ListenUDP("udp", &addr)
-	conn, err := p.GossipDataMan.NewGossipSessionForServer()
+	server, err := core.NewOverlayServer(p)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
-	defer conn.Close()
-	fmt.Println("created a udp listener")
 
-	config := sctp.Config{
-		//NetConn:       &disconnectedPacketConn{pConn: conn},
-		NetConn:       conn,
-		LoggerFactory: logging.NewDefaultLoggerFactory(),
-	}
-	a, err := sctp.Server(config)
+	stream, remotePeer, err := server.Accept()
+	fmt.Println("stream accepted from ", remotePeer)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
-	defer a.Close()
-	fmt.Println("created a server")
 
-	stream, err := a.AcceptStream()
-	if err != nil {
-		log.Panic(err)
-	}
-	defer stream.Close()
-	fmt.Println("accepted a stream")
-
-	// set unordered = true and 10ms treshold for dropping packets
-	//stream.SetReliabilityParams(true, sctp.ReliabilityTypeTimed, 10)
-	stream.SetReliabilityParams(true, sctp.ReliabilityTypeReliable, 0)
 	var pongSeqNum = 100
 	for {
 		buff := make([]byte, 1024)
-		fmt.Println("before stream.Read")
+		util.OverlayDebugPrintln("before stream.Read")
 		_, err = stream.Read(buff)
-		fmt.Println("after stream.Read", err, buff)
+		util.OverlayDebugPrintln("after stream.Read", err, buff)
 		if err != nil {
-			log.Panic(err)
+			//log.Panic(err)
+			panic(err)
 		}
-		pingMsg := string(buff)
-		fmt.Println("received:", pingMsg)
+		fmt.Println("received:", buff[0])
 
-		//fmt.Sscanf(pingMsg, "ping %d", &pongSeqNum)
-		//pongMsg := fmt.Sprintf("pong %d", pongSeqNum)
-		pongMsg := fmt.Sprintf("%d", pongSeqNum)
-		_, err = stream.Write([]byte(pongMsg))
+		_, err = stream.Write([]byte{byte(pongSeqNum % 255)})
 		if err != nil {
-			log.Panic(err)
+			//log.Panic(err)
+			panic(err)
 		}
-		fmt.Println("sent:", pongMsg)
+		fmt.Println("sent:", byte(pongSeqNum%255))
 		pongSeqNum++
 
 		time.Sleep(time.Second)
@@ -153,56 +124,25 @@ func serverRoutine(p *core.Peer) {
 }
 
 func clientRoutine(p *core.Peer) {
-	conn, err := p.GossipDataMan.NewGossipSessionForClient(p.Destname)
+	a, err := core.NewOverlayClient(p, p.Destname)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
-	defer func() {
-		if closeErr := conn.Close(); closeErr != nil {
-			panic(err)
-		}
-	}()
-	fmt.Println("dialed udp ponger")
 
-	config := sctp.Config{
-		NetConn:       conn,
-		LoggerFactory: logging.NewDefaultLoggerFactory(),
+	stream, err2 := a.OpenStream()
+	if err2 != nil {
+		panic(err2)
 	}
-	a, err := sctp.Client(config)
-	if err != nil {
-		log.Panic(err)
-	}
-	defer func() {
-		if closeErr := a.Close(); closeErr != nil {
-			panic(err)
-		}
-	}()
-	fmt.Println("created a client")
-
-	stream, err := a.OpenStream(0, sctp.PayloadTypeWebRTCString)
-	if err != nil {
-		log.Panic(err)
-	}
-	defer func() {
-		if closeErr := stream.Close(); closeErr != nil {
-			panic(err)
-		}
-	}()
-	fmt.Println("opened a stream")
-
-	// set unordered = true and 10ms treshold for dropping packets
-	//stream.SetReliabilityParams(true, sctp.ReliabilityTypeTimed, 10)
-	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
 
 	go func() {
 		var pingSeqNum int
 		for {
-			pingMsg := fmt.Sprintf("ping %d", pingSeqNum)
-			_, err = stream.Write([]byte(pingMsg))
+			_, err = stream.Write([]byte{byte(pingSeqNum % 255)})
 			if err != nil {
-				log.Panic(err)
+				//log.Panic(err)
+				panic(err)
 			}
-			fmt.Println("sent:", pingMsg)
+			fmt.Println("sent:", pingSeqNum%255)
 
 			pingSeqNum++
 
@@ -214,9 +154,9 @@ func clientRoutine(p *core.Peer) {
 		buff := make([]byte, 1024)
 		_, err = stream.Read(buff)
 		if err != nil {
-			log.Panic(err)
+			//log.Panic(err)
+			panic(err)
 		}
-		pongMsg := string(buff)
-		fmt.Println("received:", pongMsg)
+		fmt.Println("received:", buff[0])
 	}
 }
