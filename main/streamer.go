@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ryogrid/gossip-overlay/core"
+	"github.com/ryogrid/gossip-overlay/overlay_setting"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"log"
@@ -25,9 +26,14 @@ func main() {
 		nickname   = flag.String("nickname", util.MustHostname(), "Peer nickname")
 		channel    = flag.String("channel", "default", "gossip channel name")
 		destname   = flag.String("destname", "", "destination Peer name (optional)")
+		debug      = flag.String("debug", "false", "print debug info, true of false (optional)")
 	)
 	flag.Var(peers, "peer", "initial Peer (may be repeated)")
 	flag.Parse()
+
+	if *debug == "true" {
+		overlay_setting.OVERLAY_DEBUG = true
+	}
 
 	logger := log.New(os.Stderr, *nickname+"> ", log.LstdFlags)
 
@@ -111,12 +117,13 @@ func serverRoutine(p *core.Peer) {
 		}
 		fmt.Println("received:", buff[0])
 
-		_, err = stream.Write([]byte{byte(pongSeqNum % 255)})
+		sendBuf := []byte{byte(pongSeqNum % 255), buff[0]}
+		_, err = stream.Write(sendBuf)
 		if err != nil {
 			//log.Panic(err)
 			panic(err)
 		}
-		fmt.Println("sent:", byte(pongSeqNum%255))
+		fmt.Println("sent:", sendBuf[0], sendBuf[1])
 		pongSeqNum++
 
 		time.Sleep(time.Second)
@@ -157,6 +164,6 @@ func clientRoutine(p *core.Peer) {
 			//log.Panic(err)
 			panic(err)
 		}
-		fmt.Println("received:", buff[0])
+		fmt.Println("received:", buff[0], buff[1])
 	}
 }

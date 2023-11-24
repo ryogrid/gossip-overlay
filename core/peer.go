@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"io/ioutil"
@@ -115,6 +116,6 @@ func (p *Peer) OnGossipUnicast(src mesh.PeerName, buf []byte) error {
 	if err2 != nil {
 		panic(err2)
 	}
-	p.Logger.Printf("OnGossipUnicast %s %v", src, buf)
+	util.OverlayDebugPrintln(fmt.Sprintf("OnGossipUnicast %s %v", src, buf))
 	return nil
 }
