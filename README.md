@@ -24,5 +24,8 @@ $ ./streamer -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -peer 
 Network Topology:  
 - Peer-b <-> Peer-a <-> Peer-c 
 
+https://github.com/ryogrid/gossip-overlay/assets/24614/176837aa-bcdf-414a-a864-5feb63eab3a1
+
+
 ## TODO
 - [gist (in Japanese)](https://gist.github.com/ryogrid/e78088bc531bc62c10eba1c0d0e0b7fc)
