@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/pion/sctp"
 	"github.com/ryogrid/gossip-overlay/core"
 	"github.com/ryogrid/gossip-overlay/overlay_setting"
 	"github.com/ryogrid/gossip-overlay/util"
@@ -85,9 +86,9 @@ func main() {
 	}()
 
 	if *side == "recv" {
-		serverRoutine(p)
+		go serverRoutine(p)
 	} else if *side == "send" {
-		clientRoutine(p)
+		go clientRoutine(p)
 	}
 
 	logger.Print(<-errs)
@@ -99,34 +100,36 @@ func serverRoutine(p *core.Peer) {
 		panic(err)
 	}
 
-	stream, remotePeer, err := server.Accept()
-	fmt.Println("stream accepted from ", remotePeer)
-	if err != nil {
-		panic(err)
-	}
-
-	var pongSeqNum = 100
 	for {
-		buff := make([]byte, 1024)
-		util.OverlayDebugPrintln("before stream.Read")
-		_, err = stream.Read(buff)
-		util.OverlayDebugPrintln("after stream.Read", err, buff)
-		if err != nil {
-			//log.Panic(err)
-			panic(err)
+		stream, remotePeer, err2 := server.Accept()
+		fmt.Println("stream accepted from ", remotePeer)
+		if err2 != nil {
+			panic(err2)
 		}
-		fmt.Println("received:", buff[0])
 
-		sendBuf := []byte{byte(pongSeqNum % 255), buff[0]}
-		_, err = stream.Write(sendBuf)
-		if err != nil {
-			//log.Panic(err)
-			panic(err)
-		}
-		fmt.Println("sent:", sendBuf[0], sendBuf[1])
-		pongSeqNum++
+		go func(stream_ *sctp.Stream) {
+			var pongSeqNum = 100
+			for {
+				buff := make([]byte, 1024)
+				util.OverlayDebugPrintln("before stream.Read")
+				_, err = stream.Read(buff)
+				util.OverlayDebugPrintln("after stream.Read", err, buff)
+				if err != nil {
+					panic(err)
+				}
+				fmt.Println("received:", buff[0])
 
-		time.Sleep(time.Second)
+				sendBuf := []byte{byte(pongSeqNum % 255), buff[0]}
+				_, err = stream.Write(sendBuf)
+				if err != nil {
+					panic(err)
+				}
+				fmt.Println("sent:", sendBuf[0], sendBuf[1])
+				pongSeqNum++
+
+				time.Sleep(time.Second)
+			}
+		}(stream)
 	}
 }
 
