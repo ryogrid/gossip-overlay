@@ -8,8 +8,6 @@ import (
 	"github.com/pion/sctp"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
-	"math/rand"
-	"time"
 )
 
 // wrapper of sctp.Client
@@ -70,11 +68,11 @@ func (oc *OverlayClient) PrepareNewClientObj(remotePeer mesh.PeerName) error {
 }
 
 func (oc *OverlayClient) OpenStream() (*sctp.Stream, error) {
-	//stream, err := a.OpenStream(0, sctp.PayloadTypeWebRTCString)
-	dt := time.Now()
-	unix := dt.UnixNano()
-	randGen := rand.New(rand.NewSource(unix))
-	stream, err := oc.OriginalClientObj.OpenStream(uint16(randGen.Uint32()), sctp.PayloadTypeWebRTCBinary)
+	//dt := time.Now()
+	//unix := dt.UnixNano()
+	//randGen := rand.New(rand.NewSource(unix))
+	stream, err := oc.OriginalClientObj.OpenStream(uint16(0), sctp.PayloadTypeWebRTCBinary)
+	//stream, err := oc.OriginalClientObj.OpenStream(uint16(randGen.Uint32()), sctp.PayloadTypeWebRTCBinary)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -84,13 +82,13 @@ func (oc *OverlayClient) OpenStream() (*sctp.Stream, error) {
 
 	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
 
-	// write my PeerName (this is internal protocol of gossip-overlay)
-	sendData := encodeUint64ToBytes(uint64(oc.P.GossipDataMan.Self))
-	_, err = stream.Write(sendData)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
+	//// write my PeerName (this is internal protocol of gossip-overlay)
+	//sendData := encodeUint64ToBytes(uint64(oc.P.GossipDataMan.Self))
+	//_, err = stream.Write(sendData)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return nil, err
+	//}
 
 	return stream, nil
 }
