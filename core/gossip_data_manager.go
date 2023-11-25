@@ -147,10 +147,11 @@ func (gdm *GossipDataManager) SendToRemote(dest mesh.PeerName, localOpSide Opera
 	gdm.Peer.Actions <- func() {
 		defer close(c)
 		if gdm.Peer.Send != nil {
-			recvOpSide := ServerSide
-			if localOpSide == ServerSide {
-				recvOpSide = ClientSide
-			}
+			//recvOpSide := ServerSide
+			//if localOpSide == ServerSide {
+			//	recvOpSide = ClientSide
+			//}
+			recvOpSide := ClientSide
 			sendObj := GossipPacket{
 				Buf:          data,
 				ReceiverSide: recvOpSide,
