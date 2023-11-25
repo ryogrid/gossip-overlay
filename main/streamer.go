@@ -144,23 +144,47 @@ func clientRoutine(p *core.Peer) {
 		panic(err2)
 	}
 
-	go func() {
-		var pingSeqNum int
-		for {
-			_, err = stream.Write([]byte{byte(pingSeqNum % 255)})
-			if err != nil {
-				//log.Panic(err)
-				panic(err)
-			}
-			fmt.Println("sent:", pingSeqNum%255)
+	recvedByte := byte(0)
 
-			pingSeqNum++
+	//go func() {
+	//	var pingSeqNum int
+	//	for {
+	//		_, err = stream.Write([]byte{byte(pingSeqNum % 255), recvedByte})
+	//		if err != nil {
+	//			//log.Panic(err)
+	//			panic(err)
+	//		}
+	//		fmt.Println("sent:", pingSeqNum%255, recvedByte)
+	//
+	//		pingSeqNum++
+	//
+	//		time.Sleep(3 * time.Second)
+	//	}
+	//}()
+	//
+	//for {
+	//	buff := make([]byte, 1024)
+	//	_, err = stream.Read(buff)
+	//	if err != nil {
+	//		//log.Panic(err)
+	//		panic(err)
+	//	}
+	//	fmt.Println("received:", buff[0], buff[1])
+	//}
 
-			time.Sleep(3 * time.Second)
-		}
-	}()
-
+	var pingSeqNum int
 	for {
+		_, err = stream.Write([]byte{byte(pingSeqNum % 255), recvedByte})
+		if err != nil {
+			//log.Panic(err)
+			panic(err)
+		}
+		fmt.Println("sent:", pingSeqNum%255, recvedByte)
+
+		pingSeqNum++
+
+		//time.Sleep(3 * time.Second)
+
 		buff := make([]byte, 1024)
 		_, err = stream.Read(buff)
 		if err != nil {
@@ -168,5 +192,6 @@ func clientRoutine(p *core.Peer) {
 			panic(err)
 		}
 		fmt.Println("received:", buff[0], buff[1])
+		recvedByte = buff[0]
 	}
 }
