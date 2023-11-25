@@ -173,25 +173,52 @@ func clientRoutine(p *core.Peer) {
 	//}
 
 	var pingSeqNum int
-	for {
-		_, err = stream.Write([]byte{byte(pingSeqNum % 255), recvedByte})
-		if err != nil {
-			//log.Panic(err)
-			panic(err)
+	if p.Destname == mesh.PeerName(uint64(1)) {
+		for {
+			_, err = stream.Write([]byte{byte(pingSeqNum % 255), recvedByte})
+			if err != nil {
+				//log.Panic(err)
+				panic(err)
+			}
+			fmt.Println("sent:", pingSeqNum%255, recvedByte)
+
+			pingSeqNum++
+
+			//time.Sleep(3 * time.Second)
+
+			//buff := make([]byte, 1024)
+			buff := make([]byte, 2)
+			_, err = stream.Read(buff)
+			if err != nil {
+				//log.Panic(err)
+				panic(err)
+			}
+			fmt.Println("received:", buff[0], buff[1])
+			recvedByte = buff[0]
 		}
-		fmt.Println("sent:", pingSeqNum%255, recvedByte)
+	} else {
+		for {
+			//time.Sleep(3 * time.Second)
 
-		pingSeqNum++
+			//buff := make([]byte, 1024)
+			buff := make([]byte, 2)
+			_, err = stream.Read(buff)
+			if err != nil {
+				//log.Panic(err)
+				panic(err)
+			}
+			fmt.Println("received:", buff[0], buff[1])
+			recvedByte = buff[0]
 
-		//time.Sleep(3 * time.Second)
+			_, err = stream.Write([]byte{byte(pingSeqNum % 255), recvedByte})
+			if err != nil {
+				//log.Panic(err)
+				panic(err)
+			}
+			fmt.Println("sent:", pingSeqNum%255, recvedByte)
 
-		buff := make([]byte, 1024)
-		_, err = stream.Read(buff)
-		if err != nil {
-			//log.Panic(err)
-			panic(err)
+			pingSeqNum++
 		}
-		fmt.Println("received:", buff[0], buff[1])
-		recvedByte = buff[0]
 	}
+
 }
