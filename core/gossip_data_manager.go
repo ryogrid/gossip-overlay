@@ -82,7 +82,7 @@ func (gdm *GossipDataManager) Read(fromPeer mesh.PeerName, opSide OperationSideA
 	var copiedBuf = make([]byte, 0)
 	val, ok2 := gdm.LoadBuffer(fromPeer, opSide)
 	if !ok2 {
-		panic("no such Stream")
+		panic("no such StreamToNotifySelfInfo")
 	}
 	val.Mtx.Lock()
 	copiedBuf = append(copiedBuf, val.Buf...)
@@ -141,17 +141,13 @@ func (gdm *GossipDataManager) Write(fromPeer mesh.PeerName, opSide OperationSide
 	return nil
 }
 
-func (gdm *GossipDataManager) SendToRemote(dest mesh.PeerName, localOpSide OperationSideAt, data []byte) error {
+func (gdm *GossipDataManager) SendToRemote(dest mesh.PeerName, recvOpSide OperationSideAt, data []byte) error {
 	util.OverlayDebugPrintln("GossipDataManager.SendToRemote called. dest:", dest, " data:", data)
 	c := make(chan struct{})
 	gdm.Peer.Actions <- func() {
 		defer close(c)
 		if gdm.Peer.Send != nil {
-			//recvOpSide := ServerSide
-			//if localOpSide == ServerSide {
-			//	recvOpSide = ClientSide
-			//}
-			recvOpSide := ClientSide
+			//recvOpSide := ClientSide
 			sendObj := GossipPacket{
 				Buf:          data,
 				ReceiverSide: recvOpSide,
@@ -221,14 +217,34 @@ func (gdm *GossipDataManager) WhenClose(remotePeer mesh.PeerName) {
 	// do nothing
 }
 
-func (gdm *GossipDataManager) NewGossipSessionForClient(remotePeer mesh.PeerName) (*GossipSession, error) {
+func (gdm *GossipDataManager) NewGossipSessionForClientToServer(remotePeer mesh.PeerName) (*GossipSession, error) {
 	ret := &GossipSession{
-		LocalAddress:       &PeerAddress{gdm.Self},
-		RemoteAddresses:    []*PeerAddress{&PeerAddress{remotePeer}},
-		RemoteAddressesMtx: &sync.Mutex{},
-		SessMtx:            sync.RWMutex{},
-		GossipDM:           gdm,
-		SessionSide:        ClientSide,
+		LocalAddress: &PeerAddress{gdm.Self},
+		//RemoteAddress:      []*PeerAddress{&PeerAddress{remotePeer}},
+		RemoteAddress: &PeerAddress{remotePeer},
+		//RemoteAddressesMtx: &sync.Mutex{},
+		//SessMtx:            sync.RWMutex{},
+		GossipDM:          gdm,
+		LocalSessionSide:  ClientSide,
+		RemoteSessionSide: ServerSide,
+	}
+	if _, ok := gdm.LoadBuffer(remotePeer, ClientSide); !ok {
+		gdm.StoreBuffer(remotePeer, ClientSide, NewBufferWithMutex(make([]byte, 0)))
+	}
+
+	return ret, nil
+}
+
+func (gdm *GossipDataManager) NewGossipSessionForClientToClient(remotePeer mesh.PeerName) (*GossipSession, error) {
+	ret := &GossipSession{
+		LocalAddress: &PeerAddress{gdm.Self},
+		//RemoteAddress:      []*PeerAddress{&PeerAddress{remotePeer}},
+		RemoteAddress: &PeerAddress{remotePeer},
+		//RemoteAddressesMtx: &sync.Mutex{},
+		//SessMtx:            sync.RWMutex{},
+		GossipDM:          gdm,
+		LocalSessionSide:  ClientSide,
+		RemoteSessionSide: ClientSide,
 	}
 	if _, ok := gdm.LoadBuffer(remotePeer, ClientSide); !ok {
 		gdm.StoreBuffer(remotePeer, ClientSide, NewBufferWithMutex(make([]byte, 0)))
@@ -239,13 +255,14 @@ func (gdm *GossipDataManager) NewGossipSessionForClient(remotePeer mesh.PeerName
 
 func (gdm *GossipDataManager) NewGossipSessionForServer() (*GossipSession, error) {
 	ret := &GossipSession{
-		LocalAddress: &PeerAddress{gdm.Self},
-		//RemoteAddresses: &PeerAddress{math.MaxUint64},
-		RemoteAddresses:    make([]*PeerAddress, 0),
-		RemoteAddressesMtx: &sync.Mutex{},
-		SessMtx:            sync.RWMutex{},
-		GossipDM:           gdm,
-		SessionSide:        ServerSide,
+		LocalAddress:  &PeerAddress{gdm.Self},
+		RemoteAddress: &PeerAddress{math.MaxUint64},
+		//RemoteAddress:      make([]*PeerAddress, 0),
+		//RemoteAddressesMtx: &sync.Mutex{},
+		//SessMtx:     sync.RWMutex{},
+		GossipDM:          gdm,
+		LocalSessionSide:  ServerSide,
+		RemoteSessionSide: ClientSide,
 	}
 
 	return ret, nil

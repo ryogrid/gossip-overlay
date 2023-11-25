@@ -9,6 +9,7 @@ import (
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"log"
+	"math"
 	"sync"
 )
 
@@ -16,7 +17,8 @@ import (
 type OverlayServer struct {
 	P                 *Peer
 	OriginalServerObj *sctp.Association
-	Streams           []*sctp.Stream
+	ServerStream      *sctp.Stream
+	CtoCStreams       []*sctp.Stream
 	StreamsMtx        *sync.Mutex
 	gossipSession     *GossipSession
 }
@@ -25,7 +27,8 @@ func NewOverlayServer(p *Peer) (*OverlayServer, error) {
 	ret := &OverlayServer{
 		P:                 p,
 		OriginalServerObj: nil,
-		Streams:           make([]*sctp.Stream, 0),
+		ServerStream:      nil,
+		CtoCStreams:       make([]*sctp.Stream, 0),
 		StreamsMtx:        &sync.Mutex{},
 		gossipSession:     nil,
 	}
@@ -40,46 +43,85 @@ func decodeUint64FromBytes(buf []byte) uint64 {
 	return ret
 }
 
-func (os *OverlayServer) Accept() (*sctp.Stream, mesh.PeerName, error) {
-	stream, err := os.OriginalServerObj.AcceptStream()
+func decodeUint16FromBytes(buf []byte) uint16 {
+	var ret uint16
+	binary.Read(bytes.NewBuffer(buf), binary.LittleEndian, &ret)
+	return ret
+}
+
+func (ols *OverlayServer) GetInfoForCtoCStream() (remotePeer mesh.PeerName, streamID uint16, err error) {
+	util.OverlayDebugPrintln("before read remote PeerName from server stream.")
+	var buf [8]byte
+	// read PeerName of remote peer (this is internal protocol of gossip-overlay)
+	_, err = ols.ServerStream.Read(buf[:])
+	if err != nil {
+		fmt.Println("err:", err)
+		return math.MaxUint64, math.MaxUint16, err
+	}
+	decodedName := decodeUint64FromBytes(buf[:])
+	remotePeerName := mesh.PeerName(decodedName)
+	ols.gossipSession.RemoteAddress = &PeerAddress{remotePeerName}
+	util.OverlayDebugPrintln("after read remote PeerName from server stream. buf:", buf)
+	util.OverlayDebugPrintln("remotePeerName from stream: ", remotePeerName)
+
+	util.OverlayDebugPrintln("before read stream ID to use from server stream")
+	var buf2 [2]byte
+	// read stream ID to use (this is internal protocol of gossip-overlay)
+	_, err2 := ols.ServerStream.Read(buf2[:])
+	if err2 != nil {
+		fmt.Println("err:", err2)
+		return math.MaxUint64, math.MaxUint16, err2
+	}
+	util.OverlayDebugPrintln("after read stream ID from server stream. buf2:", buf2)
+	decodedStreamID := decodeUint16FromBytes(buf2[:])
+	util.OverlayDebugPrintln("stream ID to use: ", decodedStreamID)
+
+	return remotePeerName, decodedStreamID, nil
+}
+
+func (ols *OverlayServer) EstablishCtoCStream(remotePeer mesh.PeerName, streamID uint16) (*sctp.Stream, error) {
+	conn, err := ols.P.GossipDataMan.NewGossipSessionForClientToClient(remotePeer)
+	if err != nil {
+		log.Panic(err)
+	}
+	util.OverlayDebugPrintln("created a gossip session for client to client")
+
+}
+
+func (ols *OverlayServer) Accept() (*sctp.Stream, mesh.PeerName, error) {
+	stream, err := ols.OriginalServerObj.AcceptStream()
 	if err != nil {
 		log.Panic(err)
 	}
 	util.OverlayDebugPrintln("accepted a stream")
-
 	stream.SetReliabilityParams(true, sctp.ReliabilityTypeReliable, 0)
+	ols.ServerStream = stream
 
-	os.StreamsMtx.Lock()
-	os.Streams = append(os.Streams, stream)
-	os.StreamsMtx.Unlock()
-
-	util.OverlayDebugPrintln("before read remote PeerName from stream")
-	var buf [8]byte
-	// read PeerName of remote peer (this is internal protocol of gossip-overlay)
-	_, err = stream.Read(buf[:])
+	remotePeerName, streamID, err := ols.GetInfoForCtoCStream()
 	if err != nil {
-		fmt.Println("err:", err)
+		util.OverlayDebugPrintln("err:", err)
+		return nil, math.MaxUint64, err
 	}
-	util.OverlayDebugPrintln("after read remote PeerName from stream buf:", buf)
 
-	decodedName := decodeUint64FromBytes(buf[:])
-	remotePeerName := mesh.PeerName(decodedName)
-	util.OverlayDebugPrintln("remotePeerName from stream: ", remotePeerName)
+	ols.gossipSession.RemoteAddress = &PeerAddress{remotePeerName}
 
-	os.gossipSession.RemoteAddressesMtx.Lock()
-	os.gossipSession.RemoteAddresses = append(os.gossipSession.RemoteAddresses, &PeerAddress{remotePeerName})
-	os.gossipSession.RemoteAddressesMtx.Unlock()
+	cToCStream, err2 := ols.EstablishCtoCStream(remotePeerName, streamID)
+	if err2 != nil {
+		util.OverlayDebugPrintln("err2:", err2)
+		return nil, math.MaxUint64, err2
+	}
 
 	util.OverlayDebugPrintln("end of OverlayServer.Accept")
-	return stream, remotePeerName, nil
+	//return stream, remotePeerName, nil
+	return cToCStream, remotePeerName, nil
 }
 
-func (os *OverlayServer) InitInternalServerObj() error {
-	conn, err := os.P.GossipDataMan.NewGossipSessionForServer()
+func (ols *OverlayServer) InitInternalServerObj() error {
+	conn, err := ols.P.GossipDataMan.NewGossipSessionForServer()
 	if err != nil {
 		log.Panic(err)
 	}
-	util.OverlayDebugPrintln("created a gossip listener")
+	util.OverlayDebugPrintln("created a gossip session for server")
 
 	config := sctp.Config{
 		NetConn:       conn,
@@ -91,23 +133,23 @@ func (os *OverlayServer) InitInternalServerObj() error {
 	}
 	util.OverlayDebugPrintln("created a server")
 
-	os.gossipSession = conn
-	os.OriginalServerObj = a
+	ols.gossipSession = conn
+	ols.OriginalServerObj = a
 
 	return nil
 }
 
-func (os *OverlayServer) Close() error {
-	os.gossipSession.Close()
-	os.gossipSession = nil
-	os.OriginalServerObj.Close()
-	os.OriginalServerObj = nil
-	os.StreamsMtx.Lock()
-	for _, s := range os.Streams {
+func (ols *OverlayServer) Close() error {
+	ols.gossipSession.Close()
+	ols.gossipSession = nil
+	ols.OriginalServerObj.Close()
+	ols.OriginalServerObj = nil
+	ols.StreamsMtx.Lock()
+	for _, s := range ols.CtoCStreams {
 		s.Close()
 	}
-	os.Streams = nil
-	os.StreamsMtx.Unlock()
+	ols.CtoCStreams = nil
+	ols.StreamsMtx.Unlock()
 
 	return nil
 }

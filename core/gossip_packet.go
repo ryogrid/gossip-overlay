@@ -6,7 +6,6 @@ import (
 	"github.com/weaveworks/mesh"
 )
 
-// type GossipPacket []byte
 type GossipPacket struct {
 	Buf          []byte
 	ReceiverSide OperationSideAt

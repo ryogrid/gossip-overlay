@@ -8,25 +8,30 @@ import (
 	"github.com/pion/sctp"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
+	"math"
+	"math/rand"
+	"time"
 )
 
 // wrapper of sctp.Client
 type OverlayClient struct {
-	P                 *Peer
-	OriginalClientObj *sctp.Association
-	Stream            *sctp.Stream
-	GossipSession     *GossipSession
+	P                             *Peer
+	OriginalClientObj             *sctp.Association
+	StreamToNotifySelfInfo        *sctp.Stream
+	GossipSessionToNotifySelfInfo *GossipSession
+	RemotePeerName                mesh.PeerName
 }
 
 func NewOverlayClient(p *Peer, remotePeer mesh.PeerName) (*OverlayClient, error) {
 	ret := &OverlayClient{
-		P:                 p,
-		OriginalClientObj: nil,
-		Stream:            nil,
-		GossipSession:     nil,
+		P:                             p,
+		OriginalClientObj:             nil,
+		StreamToNotifySelfInfo:        nil,
+		GossipSessionToNotifySelfInfo: nil,
+		RemotePeerName:                remotePeer,
 	}
 
-	err := ret.PrepareNewClientObj(remotePeer)
+	err := ret.PrepareNewClientObj()
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -41,13 +46,19 @@ func encodeUint64ToBytes(peerName uint64) []byte {
 	return buf.Bytes()
 }
 
-func (oc *OverlayClient) PrepareNewClientObj(remotePeer mesh.PeerName) error {
-	conn, err := oc.P.GossipDataMan.NewGossipSessionForClient(remotePeer)
+func encodeUint16ToBytes(streamId uint16) []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, &streamId)
+	return buf.Bytes()
+}
+
+func (oc *OverlayClient) PrepareNewClientObj() error {
+	conn, err := oc.P.GossipDataMan.NewGossipSessionForClientToServer(oc.RemotePeerName)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-	oc.GossipSession = conn
+	oc.GossipSessionToNotifySelfInfo = conn
 	util.OverlayDebugPrintln("dialed gossip session")
 
 	config := sctp.Config{
@@ -67,34 +78,74 @@ func (oc *OverlayClient) PrepareNewClientObj(remotePeer mesh.PeerName) error {
 	return nil
 }
 
-func (oc *OverlayClient) OpenStream() (*sctp.Stream, error) {
-	//dt := time.Now()
-	//unix := dt.UnixNano()
-	//randGen := rand.New(rand.NewSource(unix))
-	stream, err := oc.OriginalClientObj.OpenStream(uint16(0), sctp.PayloadTypeWebRTCBinary)
-	//stream, err := oc.OriginalClientObj.OpenStream(uint16(randGen.Uint32()), sctp.PayloadTypeWebRTCBinary)
+func genRandomStreamId() uint16 {
+	dt := time.Now()
+	unix := dt.UnixNano()
+	randGen := rand.New(rand.NewSource(unix))
+	return uint16(randGen.Uint32())
+}
+
+func (oc *OverlayClient) innerOpenStreamCtoC() (stream *sctp.Stream, err error) {
+
+}
+
+func (oc *OverlayClient) innerOpenStreamToServer() (streamID uint16, err error) {
+	stream, err := oc.OriginalClientObj.OpenStream(0, sctp.PayloadTypeWebRTCBinary)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return math.MaxUint16, err
 	}
-	oc.Stream = stream
+	oc.StreamToNotifySelfInfo = stream
 	util.OverlayDebugPrintln("opened a stream")
 
 	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
 
-	//// write my PeerName (this is internal protocol of gossip-overlay)
-	//sendData := encodeUint64ToBytes(uint64(oc.P.GossipDataMan.Self))
-	//_, err = stream.Write(sendData)
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return nil, err
-	//}
+	util.OverlayDebugPrintln("before write self PeerName to stream")
+	// write my PeerName (this is internal protocol of gossip-overlay)
+	sendData := encodeUint64ToBytes(uint64(oc.P.GossipDataMan.Self))
+	_, err = stream.Write(sendData)
+	if err != nil {
+		fmt.Println(err)
+		return math.MaxUint16, err
+	}
+	util.OverlayDebugPrintln("after write self PeerName to stream")
+
+	util.OverlayDebugPrintln("before write stream ID to use to stream")
+	// write my PeerName (this is internal protocol of gossip-overlay)
+	streamId := genRandomStreamId()
+	sendData2 := encodeUint16ToBytes(streamId)
+	_, err = stream.Write(sendData2)
+	if err != nil {
+		fmt.Println(err)
+		return math.MaxUint16, err
+	}
+	util.OverlayDebugPrintln("after write stream ID to use to stream")
+
+	return streamId, nil
+}
+
+func (oc *OverlayClient) OpenStream() (*sctp.Stream, error) {
+	streamIdToUse, err := oc.innerOpenStreamToServer()
+	if err != nil {
+		util.OverlayDebugPrintln("err:", err)
+		return nil, err
+	}
+
+	var buf [1]byte
+	// wait until server side stream close
+	_, err2 := oc.StreamToNotifySelfInfo.Read(buf[:])
+	if err2 != nil {
+		util.OverlayDebugPrintln("err2:", err2)
+		util.OverlayDebugPrintln("may be stream is closed by server side")
+	}
+
+	stream, err3 := oc.innerOpenStreamCtoC()
 
 	return stream, nil
 }
 
 func (oc *OverlayClient) Close() error {
-	err := oc.GossipSession.Close()
+	err := oc.GossipSessionToNotifySelfInfo.Close()
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -102,7 +153,7 @@ func (oc *OverlayClient) Close() error {
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = oc.Stream.Close()
+	err = oc.StreamToNotifySelfInfo.Close()
 	if err != nil {
 		fmt.Println(err)
 	}
