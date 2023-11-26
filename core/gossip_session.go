@@ -30,13 +30,13 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 
 	var buf []byte
 	if oc.LocalSessionSide == ServerSide {
-		buf = oc.GossipDM.Read(math.MaxUint64, ServerSide)
+		buf = oc.GossipDM.Read(math.MaxUint64, 0, ServerSide)
 	} else if oc.LocalSessionSide == ClientSide {
 		//oc.RemoteAddressesMtx.Lock()
 		//peerName := oc.RemoteAddress[0].PeerName
 		peerName := oc.RemoteAddress.PeerName
 		//oc.RemoteAddressesMtx.Unlock()
-		buf = oc.GossipDM.Read(peerName, ClientSide)
+		buf = oc.GossipDM.Read(peerName, oc.StreamID, ClientSide)
 	} else {
 		panic("invalid LocalSessionSide")
 	}

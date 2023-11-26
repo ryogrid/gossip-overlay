@@ -80,7 +80,7 @@ func (ols *OverlayServer) GetInfoForCtoCStream() (remotePeer mesh.PeerName, stre
 }
 
 func (ols *OverlayServer) EstablishCtoCStream(remotePeer mesh.PeerName, streamID uint16) (*sctp.Stream, error) {
-	conn, err := ols.P.GossipDataMan.NewGossipSessionForClientToClient(remotePeer)
+	conn, err := ols.P.GossipDataMan.NewGossipSessionForClientToClient(remotePeer, streamID)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -152,8 +152,6 @@ func (ols *OverlayServer) InitInternalServerObj() error {
 }
 
 func (ols *OverlayServer) Close() error {
-	// TODO: need implement OverlayServer::Close
-
 	ols.gossipSession.Close()
 	ols.gossipSession = nil
 	ols.OriginalServerObj.Close()

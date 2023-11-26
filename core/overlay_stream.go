@@ -46,6 +46,5 @@ func (ols *OverlayStream) CloseOverlayStream() error {
 		err = err3
 	}
 
-	ols.localPeer.GossipDataMan.WhenClose(ols.remotePeerName, ols.streamID)
 	return err
 }
