@@ -86,8 +86,15 @@ func (ols *OverlayServer) EstablishCtoCStream(remotePeer mesh.PeerName, streamID
 	}
 	util.OverlayDebugPrintln("created a gossip session for client to client")
 
+	// TODO: need to create Association obj with sctp.Client method
+	// TODO: need to call Association::OpenStream to remotePeer with streamID then get Stream obj
+
+	// TODO: write streamID to remotePeer through got Stream obj's Write as SYN and call Stream::Read to recv ACK (Read should block until ACK is received)
+
+	return stream, nil
 }
 
+// TODO: need to check second call of OverlayServer::Accept works collectly at view of ols.OriginalServerObj.AcceptStream call
 func (ols *OverlayServer) Accept() (*sctp.Stream, mesh.PeerName, error) {
 	stream, err := ols.OriginalServerObj.AcceptStream()
 	if err != nil {
@@ -105,6 +112,8 @@ func (ols *OverlayServer) Accept() (*sctp.Stream, mesh.PeerName, error) {
 
 	ols.gossipSession.RemoteAddress = &PeerAddress{remotePeerName}
 
+	// TODO: need to call Close of stream variable
+
 	cToCStream, err2 := ols.EstablishCtoCStream(remotePeerName, streamID)
 	if err2 != nil {
 		util.OverlayDebugPrintln("err2:", err2)
@@ -113,7 +122,10 @@ func (ols *OverlayServer) Accept() (*sctp.Stream, mesh.PeerName, error) {
 
 	util.OverlayDebugPrintln("end of OverlayServer.Accept")
 	//return stream, remotePeerName, nil
-	return cToCStream, remotePeerName, nil
+
+	// TODO: need to wrapp stream obj with needed obj reference (OverlayClient::OpenStream)
+
+	return overlayStream, remotePeerName, nil
 }
 
 func (ols *OverlayServer) InitInternalServerObj() error {
@@ -140,6 +152,8 @@ func (ols *OverlayServer) InitInternalServerObj() error {
 }
 
 func (ols *OverlayServer) Close() error {
+	// TODO: need implement OverlayServer::Close
+
 	ols.gossipSession.Close()
 	ols.gossipSession = nil
 	ols.OriginalServerObj.Close()

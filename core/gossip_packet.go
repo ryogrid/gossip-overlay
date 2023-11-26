@@ -9,6 +9,7 @@ import (
 type GossipPacket struct {
 	Buf          []byte
 	ReceiverSide OperationSideAt
+	StreamID     uint16
 }
 
 func (gp GossipPacket) Encode() [][]byte {

@@ -18,6 +18,7 @@ type GossipSession struct {
 	GossipDM          *GossipDataManager
 	LocalSessionSide  OperationSideAt
 	RemoteSessionSide OperationSideAt
+	StreamID          uint16
 }
 
 // GossipSetton implements net.Conn
@@ -66,7 +67,7 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 		//for _, peerName := range peerNames {
 		//	oc.GossipDM.SendToRemote(peerName, oc.LocalSessionSide, b)
 		//}
-		oc.GossipDM.SendToRemote(oc.RemoteAddress.PeerName, oc.RemoteSessionSide, b)
+		oc.GossipDM.SendToRemote(oc.RemoteAddress.PeerName, oc.StreamID, oc.RemoteSessionSide, b)
 	} else if oc.LocalSessionSide == ServerSide {
 		// server side uses LastRecvPeer until StreamToNotifySelfInfo is established
 		// because remote peer name can't be known until then
@@ -74,7 +75,7 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 			time.Sleep(100 * time.Millisecond)
 		}
 		//oc.GossipDM.SendToRemote(oc.GossipDM.LastRecvPeer, oc.LocalSessionSide, b)
-		oc.GossipDM.SendToRemote(oc.GossipDM.LastRecvPeer, oc.RemoteSessionSide, b)
+		oc.GossipDM.SendToRemote(oc.GossipDM.LastRecvPeer, oc.StreamID, oc.RemoteSessionSide, b)
 	} else {
 		panic("invalid LocalSessionSide")
 	}
@@ -91,7 +92,7 @@ func (oc *GossipSession) Close() error {
 	//	oc.GossipDM.WhenClose(peerName)
 	//}
 	//oc.RemoteAddressesMtx.Unlock()
-	oc.GossipDM.WhenClose(oc.RemoteAddress.PeerName)
+	oc.GossipDM.WhenClose(oc.RemoteAddress.PeerName, oc.StreamID)
 
 	return nil
 }

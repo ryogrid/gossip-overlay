@@ -22,6 +22,8 @@ type OverlayClient struct {
 	RemotePeerName                mesh.PeerName
 }
 
+// TODO: need to implement wrapper class of sctp.Stream for close related resouces properly (client side)
+
 func NewOverlayClient(p *Peer, remotePeer mesh.PeerName) (*OverlayClient, error) {
 	ret := &OverlayClient{
 		P:                             p,
@@ -85,8 +87,13 @@ func genRandomStreamId() uint16 {
 	return uint16(randGen.Uint32())
 }
 
-func (oc *OverlayClient) innerOpenStreamCtoC() (stream *sctp.Stream, err error) {
+func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*sctp.Stream, error) {
+	// TODO: need to create Association obj with sctp.Client method
+	// TODO: need to call Association::OpenStream to remotePeer with streamID then get Stream obj
+	// TODO: read streamID from remotePeer through got Stream obj's Read as SYN (Read should block until ACK is received)
+	//       and call Stream::Write to send ACK
 
+	return stream, nil
 }
 
 func (oc *OverlayClient) innerOpenStreamToServer() (streamID uint16, err error) {
@@ -139,12 +146,18 @@ func (oc *OverlayClient) OpenStream() (*sctp.Stream, error) {
 		util.OverlayDebugPrintln("may be stream is closed by server side")
 	}
 
-	stream, err3 := oc.innerOpenStreamCtoC()
+	// TODO: need to clear used local buffer for sending self info (OverlayClient::OpenStream)
 
-	return stream, nil
+	stream, err3 := oc.establishCtoCStream(streamIdToUse)
+
+	// TODO: need to wrapp stream obj with needed obj reference (OverlayClient::OpenStream)
+
+	return overlayStream, nil
 }
 
 func (oc *OverlayClient) Close() error {
+	// TODO: need implement OverlayClient::Close
+
 	err := oc.GossipSessionToNotifySelfInfo.Close()
 	if err != nil {
 		fmt.Println(err)

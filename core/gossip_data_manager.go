@@ -76,6 +76,14 @@ func (gdm *GossipDataManager) StoreBuffer(fromPeer mesh.PeerName, opSide Operati
 	gdm.bufs.Store(storePeer.String(), buf)
 }
 
+func (gdm *GossipDataManager) RemoveBuffer(peerName mesh.PeerName, opSide OperationSideAt, buf *BufferWithMutex) {
+	storePeer := fromPeer
+	if opSide == ServerSide {
+		storePeer = math.MaxUint64
+	}
+	gdm.bufs.Store(storePeer.String(), buf)
+}
+
 func (gdm *GossipDataManager) Read(fromPeer mesh.PeerName, opSide OperationSideAt) (result []byte) {
 	util.OverlayDebugPrintln("GossipDataManager.Read called: start. fromPeer:", fromPeer)
 
@@ -141,7 +149,7 @@ func (gdm *GossipDataManager) Write(fromPeer mesh.PeerName, opSide OperationSide
 	return nil
 }
 
-func (gdm *GossipDataManager) SendToRemote(dest mesh.PeerName, recvOpSide OperationSideAt, data []byte) error {
+func (gdm *GossipDataManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, data []byte) error {
 	util.OverlayDebugPrintln("GossipDataManager.SendToRemote called. dest:", dest, " data:", data)
 	c := make(chan struct{})
 	gdm.Peer.Actions <- func() {
@@ -151,6 +159,7 @@ func (gdm *GossipDataManager) SendToRemote(dest mesh.PeerName, recvOpSide Operat
 			sendObj := GossipPacket{
 				Buf:          data,
 				ReceiverSide: recvOpSide,
+				StreamID:     streamID,
 			}
 			encodedData := sendObj.Encode()[0]
 			for {
@@ -211,7 +220,8 @@ func (gdm *GossipDataManager) WriteToLocalBuffer(p *Peer, src mesh.PeerName, opS
 	return nil
 }
 
-func (gdm *GossipDataManager) WhenClose(remotePeer mesh.PeerName) {
+func (gdm *GossipDataManager) WhenClose(remotePeer mesh.PeerName, streamID uint16) error {
+	gdm.
 	// TODO: need to modify according to current impl
 
 	// do nothing
@@ -227,6 +237,7 @@ func (gdm *GossipDataManager) NewGossipSessionForClientToServer(remotePeer mesh.
 		GossipDM:          gdm,
 		LocalSessionSide:  ClientSide,
 		RemoteSessionSide: ServerSide,
+		StreamID: 0,
 	}
 	if _, ok := gdm.LoadBuffer(remotePeer, ClientSide); !ok {
 		gdm.StoreBuffer(remotePeer, ClientSide, NewBufferWithMutex(make([]byte, 0)))
@@ -235,7 +246,7 @@ func (gdm *GossipDataManager) NewGossipSessionForClientToServer(remotePeer mesh.
 	return ret, nil
 }
 
-func (gdm *GossipDataManager) NewGossipSessionForClientToClient(remotePeer mesh.PeerName) (*GossipSession, error) {
+func (gdm *GossipDataManager) NewGossipSessionForClientToClient(remotePeer mesh.PeerName, streamID uint16) (*GossipSession, error) {
 	ret := &GossipSession{
 		LocalAddress: &PeerAddress{gdm.Self},
 		//RemoteAddress:      []*PeerAddress{&PeerAddress{remotePeer}},
@@ -245,6 +256,7 @@ func (gdm *GossipDataManager) NewGossipSessionForClientToClient(remotePeer mesh.
 		GossipDM:          gdm,
 		LocalSessionSide:  ClientSide,
 		RemoteSessionSide: ClientSide,
+		StreamID: streamID,
 	}
 	if _, ok := gdm.LoadBuffer(remotePeer, ClientSide); !ok {
 		gdm.StoreBuffer(remotePeer, ClientSide, NewBufferWithMutex(make([]byte, 0)))
@@ -263,6 +275,7 @@ func (gdm *GossipDataManager) NewGossipSessionForServer() (*GossipSession, error
 		GossipDM:          gdm,
 		LocalSessionSide:  ServerSide,
 		RemoteSessionSide: ClientSide,
+		StreamID: 0,
 	}
 
 	return ret, nil
