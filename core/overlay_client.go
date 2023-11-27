@@ -22,8 +22,6 @@ type OverlayClient struct {
 	RemotePeerName                mesh.PeerName
 }
 
-// TODO: need to implement wrapper class of sctp.Stream for close related resouces properly (client side)
-
 func NewOverlayClient(p *Peer, remotePeer mesh.PeerName) (*OverlayClient, error) {
 	ret := &OverlayClient{
 		P:                             p,
@@ -61,7 +59,7 @@ func (oc *OverlayClient) PrepareNewClientObj() error {
 		return err
 	}
 	oc.GossipSessionToNotifySelfInfo = conn
-	util.OverlayDebugPrintln("dialed gossip session")
+	util.OverlayDebugPrintln("dialed gossip session to server")
 
 	config := sctp.Config{
 		NetConn:       conn,
@@ -75,7 +73,7 @@ func (oc *OverlayClient) PrepareNewClientObj() error {
 
 	oc.OriginalClientObj = a
 
-	util.OverlayDebugPrintln("created a client")
+	util.OverlayDebugPrintln("prepared a inner client")
 
 	return nil
 }
@@ -87,13 +85,39 @@ func genRandomStreamId() uint16 {
 	return uint16(randGen.Uint32())
 }
 
-func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*sctp.Stream, error) {
-	// TODO: need to create Association obj with sctp.Client method
-	// TODO: need to call Association::OpenStream to remotePeer with streamID then get Stream obj
+func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, error) {
+	conn, err := oc.P.GossipDataMan.NewGossipSessionForClientToClient(oc.RemotePeerName, streamID)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	util.OverlayDebugPrintln("dialed gossip session for client to client")
+
+	config := sctp.Config{
+		NetConn:       conn,
+		LoggerFactory: logging.NewDefaultLoggerFactory(),
+	}
+	a, err2 := sctp.Client(config)
+	if err2 != nil {
+		fmt.Println(err2)
+		return nil, err2
+	}
+
+	stream, err3 := oc.OriginalClientObj.OpenStream(streamID, sctp.PayloadTypeWebRTCBinary)
+	if err3 != nil {
+		fmt.Println(err3)
+		return nil, err3
+	}
+	util.OverlayDebugPrintln("opened a stream for client to client")
+
+	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
+
 	// TODO: read streamID from remotePeer through got Stream obj's Read as SYN (Read should block until ACK is received)
 	//       and call Stream::Write to send ACK
 
-	return stream, nil
+	overlayStream := NewOverlayStream(oc.P, stream, a, conn, streamID)
+
+	return overlayStream, nil
 }
 
 func (oc *OverlayClient) innerOpenStreamToServer() (streamID uint16, err error) {
@@ -103,17 +127,17 @@ func (oc *OverlayClient) innerOpenStreamToServer() (streamID uint16, err error) 
 		return math.MaxUint16, err
 	}
 	oc.StreamToNotifySelfInfo = stream
-	util.OverlayDebugPrintln("opened a stream")
+	util.OverlayDebugPrintln("opened a stream to server")
 
 	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
 
 	util.OverlayDebugPrintln("before write self PeerName to stream")
 	// write my PeerName (this is internal protocol of gossip-overlay)
 	sendData := encodeUint64ToBytes(uint64(oc.P.GossipDataMan.Self))
-	_, err = stream.Write(sendData)
-	if err != nil {
-		fmt.Println(err)
-		return math.MaxUint16, err
+	_, err2 := stream.Write(sendData)
+	if err2 != nil {
+		fmt.Println(err2)
+		return math.MaxUint16, err2
 	}
 	util.OverlayDebugPrintln("after write self PeerName to stream")
 
@@ -121,22 +145,24 @@ func (oc *OverlayClient) innerOpenStreamToServer() (streamID uint16, err error) 
 	// write my PeerName (this is internal protocol of gossip-overlay)
 	streamId := genRandomStreamId()
 	sendData2 := encodeUint16ToBytes(streamId)
-	_, err = stream.Write(sendData2)
-	if err != nil {
-		fmt.Println(err)
-		return math.MaxUint16, err
+	_, err3 := stream.Write(sendData2)
+	if err3 != nil {
+		fmt.Println(err3)
+		return math.MaxUint16, err3
 	}
 	util.OverlayDebugPrintln("after write stream ID to use to stream")
 
 	return streamId, nil
 }
 
-func (oc *OverlayClient) OpenStream() (*sctp.Stream, error) {
+func (oc *OverlayClient) OpenStream() (*OverlayStream, error) {
 	streamIdToUse, err := oc.innerOpenStreamToServer()
 	if err != nil {
 		util.OverlayDebugPrintln("err:", err)
 		return nil, err
 	}
+
+	util.OverlayDebugPrintln("before waiting for server side stream close")
 
 	var buf [1]byte
 	// wait until server side stream close
@@ -146,18 +172,22 @@ func (oc *OverlayClient) OpenStream() (*sctp.Stream, error) {
 		util.OverlayDebugPrintln("may be stream is closed by server side")
 	}
 
+	util.OverlayDebugPrintln("after waiting for server side stream close")
+
 	// TODO: need to clear used local buffer for sending self info (OverlayClient::OpenStream)
 
-	stream, err3 := oc.establishCtoCStream(streamIdToUse)
+	overlayStream, err3 := oc.establishCtoCStream(streamIdToUse)
+	if err3 != nil {
+		fmt.Println(err3)
+		return nil, err3
+	}
 
-	// TODO: need to wrapp stream obj with needed obj reference (OverlayClient::OpenStream)
+	util.OverlayDebugPrintln("end of OverlayClient::OpenStream")
 
 	return overlayStream, nil
 }
 
 func (oc *OverlayClient) Close() error {
-	// TODO: need implement OverlayClient::Close
-
 	err := oc.GossipSessionToNotifySelfInfo.Close()
 	if err != nil {
 		fmt.Println(err)
@@ -170,5 +200,6 @@ func (oc *OverlayClient) Close() error {
 	if err != nil {
 		fmt.Println(err)
 	}
-	return err
+
+	return nil
 }

@@ -91,7 +91,9 @@ func (ols *OverlayServer) EstablishCtoCStream(remotePeer mesh.PeerName, streamID
 
 	// TODO: write streamID to remotePeer through got Stream obj's Write as SYN and call Stream::Read to recv ACK (Read should block until ACK is received)
 
-	return stream, nil
+	// TODO: need to wrapp stream obj with needed obj reference (OverlayClient::OpenStream)
+
+	return overlayStream, nil
 }
 
 // TODO: need to check second call of OverlayServer::Accept works collectly at view of ols.OriginalServerObj.AcceptStream call
@@ -114,7 +116,7 @@ func (ols *OverlayServer) Accept() (*sctp.Stream, mesh.PeerName, error) {
 
 	// TODO: need to call Close of stream variable
 
-	cToCStream, err2 := ols.EstablishCtoCStream(remotePeerName, streamID)
+	overlayStream, err2 := ols.EstablishCtoCStream(remotePeerName, streamID)
 	if err2 != nil {
 		util.OverlayDebugPrintln("err2:", err2)
 		return nil, math.MaxUint64, err2
@@ -122,8 +124,6 @@ func (ols *OverlayServer) Accept() (*sctp.Stream, mesh.PeerName, error) {
 
 	util.OverlayDebugPrintln("end of OverlayServer.Accept")
 	//return stream, remotePeerName, nil
-
-	// TODO: need to wrapp stream obj with needed obj reference (OverlayClient::OpenStream)
 
 	return overlayStream, remotePeerName, nil
 }
