@@ -112,7 +112,7 @@ func (p *Peer) OnGossipUnicast(src mesh.PeerName, buf []byte) error {
 		panic(err)
 	}
 
-	err2 := p.GossipDataMan.WriteToLocalBuffer(p, src, gp.ReceiverSide, gp.Buf)
+	err2 := p.GossipDataMan.WriteToLocalBuffer(p, src, gp.StreamID, gp.ReceiverSide, gp.Buf)
 	if err2 != nil {
 		panic(err2)
 	}

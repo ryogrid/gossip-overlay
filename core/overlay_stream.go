@@ -26,7 +26,7 @@ func NewOverlayStream(p *Peer, stream *sctp.Stream, clientObj *sctp.Association,
 	}
 }
 
-// for resource release, need to call this method and other similar method call is not needed
+// for resource release, need to call this method. other similar method call is not needed exept one of OverlayServer.
 func (ols *OverlayStream) CloseOverlayStream() error {
 	var err error = nil
 

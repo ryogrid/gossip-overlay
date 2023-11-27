@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/pion/sctp"
 	"github.com/ryogrid/gossip-overlay/core"
 	"github.com/ryogrid/gossip-overlay/overlay_setting"
 	"github.com/ryogrid/gossip-overlay/util"
@@ -107,7 +106,7 @@ func serverRoutine(p *core.Peer) {
 			panic(err2)
 		}
 
-		go func(stream_ *sctp.Stream) {
+		go func(stream_ *core.OverlayStream) {
 			var pongSeqNum = 100
 			for {
 				buff := make([]byte, 1024)

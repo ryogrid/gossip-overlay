@@ -79,25 +79,42 @@ func (ols *OverlayServer) GetInfoForCtoCStream() (remotePeer mesh.PeerName, stre
 	return remotePeerName, decodedStreamID, nil
 }
 
-func (ols *OverlayServer) EstablishCtoCStream(remotePeer mesh.PeerName, streamID uint16) (*sctp.Stream, error) {
+func (ols *OverlayServer) EstablishCtoCStream(remotePeer mesh.PeerName, streamID uint16) (*OverlayStream, error) {
 	conn, err := ols.P.GossipDataMan.NewGossipSessionForClientToClient(remotePeer, streamID)
 	if err != nil {
 		log.Panic(err)
 	}
 	util.OverlayDebugPrintln("created a gossip session for client to client")
 
-	// TODO: need to create Association obj with sctp.Client method
-	// TODO: need to call Association::OpenStream to remotePeer with streamID then get Stream obj
+	config := sctp.Config{
+		NetConn:       conn,
+		LoggerFactory: logging.NewDefaultLoggerFactory(),
+	}
+	a, err2 := sctp.Client(config)
+	if err2 != nil {
+		fmt.Println(err2)
+		return nil, err2
+	}
 
-	// TODO: write streamID to remotePeer through got Stream obj's Write as SYN and call Stream::Read to recv ACK (Read should block until ACK is received)
+	stream, err3 := a.OpenStream(streamID, sctp.PayloadTypeWebRTCBinary)
+	if err3 != nil {
+		fmt.Println(err3)
+		return nil, err3
+	}
+	util.OverlayDebugPrintln("opened a stream for client to client")
 
-	// TODO: need to wrapp stream obj with needed obj reference (OverlayClient::OpenStream)
+	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
+
+	// TODO: write streamID to remotePeer through got Stream obj's Write as SYN
+	//       and call Stream::Read to recv ACK (Read should block until ACK is received)
+
+	overlayStream := NewOverlayStream(ols.P, stream, a, conn, streamID)
 
 	return overlayStream, nil
 }
 
 // TODO: need to check second call of OverlayServer::Accept works collectly at view of ols.OriginalServerObj.AcceptStream call
-func (ols *OverlayServer) Accept() (*sctp.Stream, mesh.PeerName, error) {
+func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, error) {
 	stream, err := ols.OriginalServerObj.AcceptStream()
 	if err != nil {
 		log.Panic(err)
@@ -115,6 +132,7 @@ func (ols *OverlayServer) Accept() (*sctp.Stream, mesh.PeerName, error) {
 	ols.gossipSession.RemoteAddress = &PeerAddress{remotePeerName}
 
 	// TODO: need to call Close of stream variable
+	ols.ServerStream = nil
 
 	overlayStream, err2 := ols.EstablishCtoCStream(remotePeerName, streamID)
 	if err2 != nil {
