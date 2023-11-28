@@ -85,13 +85,6 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 
 // Close closes the conn and releases any Read calls
 func (oc *GossipSession) Close() error {
-	//oc.RemoteAddressesMtx.Lock()
-	//peerNames := make([]mesh.PeerName, 0)
-	//oc.RemoteAddressesMtx.Unlock()
-	//for _, peerName := range peerNames {
-	//	oc.GossipDM.WhenClose(peerName)
-	//}
-	//oc.RemoteAddressesMtx.Unlock()
 	oc.GossipDM.WhenClose(oc.RemoteAddress.PeerName, oc.StreamID)
 
 	return nil

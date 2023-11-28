@@ -105,8 +105,22 @@ func (ols *OverlayServer) EstablishCtoCStream(remotePeer mesh.PeerName, streamID
 
 	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
 
-	// TODO: write streamID to remotePeer through got Stream obj's Write as SYN
-	//       and call Stream::Read to recv ACK (Read should block until ACK is received)
+	// send SYN
+	sendData := encodeUint16ToBytes(streamID)
+	_, err4 := stream.Write(sendData)
+	if err4 != nil {
+		fmt.Println(err4)
+		return nil, err4
+	}
+
+	// wait until ACK is received
+	buf := make([]byte, 2)
+	n, err5 := stream.Read(buf)
+	recvedStreamID := decodeUint16FromBytes(buf)
+	if err5 != nil || n != 2 || recvedStreamID != streamID {
+		fmt.Println("err:", err5, " n:", n, " recvedStreamID:", recvedStreamID)
+		return nil, err5
+	}
 
 	overlayStream := NewOverlayStream(ols.P, stream, a, conn, streamID)
 
@@ -131,7 +145,8 @@ func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, error) {
 
 	ols.gossipSession.RemoteAddress = &PeerAddress{remotePeerName}
 
-	// TODO: need to call Close of stream variable
+	// stream closing is notified to client and client starts establishment of CtoC stream
+	ols.ServerStream.Close()
 	ols.ServerStream = nil
 
 	overlayStream, err2 := ols.EstablishCtoCStream(remotePeerName, streamID)
@@ -141,7 +156,6 @@ func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, error) {
 	}
 
 	util.OverlayDebugPrintln("end of OverlayServer.Accept")
-	//return stream, remotePeerName, nil
 
 	return overlayStream, remotePeerName, nil
 }

@@ -112,8 +112,22 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 
 	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
 
-	// TODO: read streamID from remotePeer through got Stream obj's Read as SYN (Read should block until ACK is received)
-	//       and call Stream::Write to send ACK
+	// wait until SYN is received
+	buf := make([]byte, 2)
+	n, err4 := stream.Read(buf)
+	recvedStreamID := decodeUint16FromBytes(buf)
+	if err4 != nil || n != 2 || recvedStreamID != streamID {
+		fmt.Println("err:", err4, " n:", n, " recvedStreamID:", recvedStreamID)
+		return nil, err4
+	}
+
+	// send ACK
+	sendData := encodeUint16ToBytes(streamID)
+	_, err5 := stream.Write(sendData)
+	if err5 != nil {
+		fmt.Println(err5)
+		return nil, err5
+	}
 
 	overlayStream := NewOverlayStream(oc.P, stream, a, conn, streamID)
 
@@ -174,7 +188,8 @@ func (oc *OverlayClient) OpenStream() (*OverlayStream, error) {
 
 	util.OverlayDebugPrintln("after waiting for server side stream close")
 
-	// TODO: need to clear used local buffer for sending self info (OverlayClient::OpenStream)
+	// resouce releases: stream to notify self info and related resources
+	oc.Close()
 
 	overlayStream, err3 := oc.establishCtoCStream(streamIdToUse)
 	if err3 != nil {
