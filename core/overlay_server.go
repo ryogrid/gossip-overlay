@@ -147,6 +147,7 @@ func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, error) {
 
 	// stream closing is notified to client and client starts establishment of CtoC stream
 	ols.ServerStream.Close()
+	util.OverlayDebugPrintln("OverlayServer::Accept: closed a server stream to notify CtC stream establishment process starting.")
 	ols.ServerStream = nil
 
 	overlayStream, err2 := ols.EstablishCtoCStream(remotePeerName, streamID)

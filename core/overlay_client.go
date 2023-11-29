@@ -103,7 +103,7 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 		return nil, err2
 	}
 
-	stream, err3 := oc.OriginalClientObj.OpenStream(streamID, sctp.PayloadTypeWebRTCBinary)
+	stream, err3 := a.OpenStream(streamID, sctp.PayloadTypeWebRTCBinary)
 	if err3 != nil {
 		fmt.Println(err3)
 		return nil, err3
