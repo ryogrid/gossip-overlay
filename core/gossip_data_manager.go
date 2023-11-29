@@ -19,14 +19,16 @@ const (
 )
 
 type BufferWithMutex struct {
-	Buf []byte
-	Mtx *sync.Mutex
+	Buf     []byte
+	Mtx     *sync.Mutex
+	ReadMtx *sync.Mutex
 }
 
 func NewBufferWithMutex(buf []byte) *BufferWithMutex {
 	return &BufferWithMutex{
-		Buf: buf,
-		Mtx: &sync.Mutex{},
+		Buf:     buf,
+		Mtx:     &sync.Mutex{}, // used by write / read operation
+		ReadMtx: &sync.Mutex{}, // used by read operation only
 	}
 }
 
@@ -97,22 +99,24 @@ func (gdm *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16, opSi
 	val.Buf = make([]byte, 0)
 	val.Mtx.Unlock()
 
+	val.ReadMtx.Lock()
 	util.OverlayDebugPrintln("GossipDataManager.Read called: before checking length of retBase loop.")
 	if len(copiedBuf) == 0 {
 		for {
 			if storedBuf, ok := gdm.LoadBuffer(fromPeer, streamID, opSide); ok {
 				// wait unitl data received
-				storedBuf.Mtx.Lock()
+				//storedBuf.Mtx.Lock()
 				if len(storedBuf.Buf) > 0 {
 					// end waiting
-					storedBuf.Mtx.Unlock()
+					//storedBuf.Mtx.Unlock()
 					break
 				}
-				storedBuf.Mtx.Unlock()
+				//storedBuf.Mtx.Unlock()
 				time.Sleep(1 * time.Millisecond)
 			} else {
 				util.OverlayDebugPrintln("GossipDataManager.Read: waiting end because GossipSession should closed.")
 				//return nil
+				val.ReadMtx.Unlock()
 				return make([]byte, 0)
 			}
 		}
@@ -129,6 +133,7 @@ func (gdm *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16, opSi
 		storedBuf.Buf = make([]byte, 0)
 		gdm.StoreBuffer(fromPeer, streamID, opSide, storedBuf)
 	}
+	val.ReadMtx.Unlock()
 	util.OverlayDebugPrintln("GossipDataManager.Read called: after checking length of retBase loop.")
 
 	util.OverlayDebugPrintln("GossipDataManager.Read called: end. fromPeer:", fromPeer, " copiedBuf:", copiedBuf)
