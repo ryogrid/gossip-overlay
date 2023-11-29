@@ -136,7 +136,7 @@ func (gdm *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16, opSi
 	val.ReadMtx.Unlock()
 	util.OverlayDebugPrintln("GossipDataManager.Read called: after checking length of retBase loop.")
 
-	util.OverlayDebugPrintln("GossipDataManager.Read called: end. fromPeer:", fromPeer, " copiedBuf:", copiedBuf)
+	util.OverlayDebugPrintln("GossipDataManager.Read called: end. fromPeer:", fromPeer, " streamID", streamID, " copiedBuf:", copiedBuf)
 	return copiedBuf
 }
 
