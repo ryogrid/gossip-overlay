@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"github.com/pion/logging"
@@ -210,6 +211,10 @@ func (oc *OverlayClient) Close() error {
 	err := oc.OriginalClientObj.Close()
 	if err != nil {
 		fmt.Println(err)
+	}
+	err3 := oc.OriginalClientObj.Shutdown(context.Background())
+	if err3 != nil {
+		fmt.Println(err3)
 	}
 	err2 := oc.StreamToNotifySelfInfo.Close()
 	if err2 != nil {

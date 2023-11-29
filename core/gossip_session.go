@@ -26,7 +26,7 @@ var _ net.Conn = &GossipSession{}
 
 // Read
 func (oc *GossipSession) Read(b []byte) (n int, err error) {
-	util.OverlayDebugPrintln("GossipSessionToNotifySelfInfo.Read called")
+	util.OverlayDebugPrintln("GossipSession.Read called")
 
 	var buf []byte
 	if oc.LocalSessionSide == ServerSide {
@@ -47,7 +47,7 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 
 // Write writes len(p) bytes from p to the DTLS connection
 func (oc *GossipSession) Write(b []byte) (n int, err error) {
-	util.OverlayDebugPrintln("GossipSessionToNotifySelfInfo.Write called", b)
+	util.OverlayDebugPrintln("GossipSession.Write called", b)
 
 	//if len(oc.RemoteAddress) > 0 {
 	if oc.LocalSessionSide == ClientSide {
@@ -91,7 +91,7 @@ func (oc *GossipSession) Close() error {
 }
 
 func (oc *GossipSession) LocalAddr() net.Addr {
-	util.OverlayDebugPrintln("GossipSessionToNotifySelfInfo.LocalAddr called", oc.LocalAddress.PeerName)
+	util.OverlayDebugPrintln("GossipSession.LocalAddr called", oc.LocalAddress.PeerName)
 	if oc.LocalAddress != nil {
 		return oc.LocalAddress
 	}
@@ -99,7 +99,7 @@ func (oc *GossipSession) LocalAddr() net.Addr {
 }
 
 func (oc *GossipSession) RemoteAddr() net.Addr {
-	util.OverlayDebugPrintln("GossipSessionToNotifySelfInfo.RemoteAddr called")
+	util.OverlayDebugPrintln("GossipSession.RemoteAddr called")
 	//oc.RemoteAddressesMtx.Lock()
 	//defer oc.RemoteAddressesMtx.Unlock()
 	//if len(oc.RemoteAddress) > 0 {
@@ -113,18 +113,18 @@ func (oc *GossipSession) RemoteAddr() net.Addr {
 
 // SetDeadline is a stub
 func (oc *GossipSession) SetDeadline(t time.Time) error {
-	util.OverlayDebugPrintln("GossipSessionToNotifySelfInfo.SetDeadline called", t)
+	util.OverlayDebugPrintln("GossipSession.SetDeadline called", t)
 	return nil
 }
 
 // SetReadDeadline is a stub
 func (oc *GossipSession) SetReadDeadline(t time.Time) error {
-	util.OverlayDebugPrintln("GossipSessionToNotifySelfInfo.SetReadDeadline called", t)
+	util.OverlayDebugPrintln("GossipSession.SetReadDeadline called", t)
 	return nil
 }
 
 // SetWriteDeadline is a stub
 func (oc *GossipSession) SetWriteDeadline(t time.Time) error {
-	util.OverlayDebugPrintln("GossipSessionToNotifySelfInfo.SetWriteDeadline called", t)
+	util.OverlayDebugPrintln("GossipSession.SetWriteDeadline called", t)
 	return nil
 }

@@ -89,7 +89,8 @@ func (gdm *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16, opSi
 	if !ok2 {
 		//panic("no such StreamToNotifySelfInfo")
 		util.OverlayDebugPrintln("no such StreamToNotifySelfInfo!")
-		return nil
+		//return nil
+		return make([]byte, 0)
 	}
 	val.Mtx.Lock()
 	copiedBuf = append(copiedBuf, val.Buf...)
@@ -111,7 +112,8 @@ func (gdm *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16, opSi
 				time.Sleep(1 * time.Millisecond)
 			} else {
 				util.OverlayDebugPrintln("GossipDataManager.Read: waiting end because GossipSession should closed.")
-				return nil
+				//return nil
+				return make([]byte, 0)
 			}
 		}
 
@@ -134,7 +136,7 @@ func (gdm *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16, opSi
 }
 
 func (gdm *GossipDataManager) Write(fromPeer mesh.PeerName, streamID uint16, opSide OperationSideAt, data []byte) error {
-	util.OverlayDebugPrintln("GossipDataManager.Write called. fromPeer:", fromPeer, " data:", data)
+	util.OverlayDebugPrintln("GossipDataManager.Write called. fromPeer:", fromPeer, " streamID", streamID, " data:", data)
 
 	var stBuf []byte
 	var stBufMtx *sync.Mutex
@@ -166,7 +168,7 @@ func (gdm *GossipDataManager) Write(fromPeer mesh.PeerName, streamID uint16, opS
 }
 
 func (gdm *GossipDataManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, data []byte) error {
-	util.OverlayDebugPrintln("GossipDataManager.SendToRemote called. dest:", dest, " data:", data)
+	util.OverlayDebugPrintln("GossipDataManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
 	c := make(chan struct{})
 	gdm.Peer.Actions <- func() {
 		defer close(c)
