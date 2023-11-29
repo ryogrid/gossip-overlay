@@ -203,17 +203,17 @@ func (oc *OverlayClient) OpenStream() (*OverlayStream, error) {
 }
 
 func (oc *OverlayClient) Close() error {
-	err := oc.GossipSessionToNotifySelfInfo.Close()
+	//err := oc.GossipSessionToNotifySelfInfo.Close()
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	err := oc.OriginalClientObj.Close()
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = oc.OriginalClientObj.Close()
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = oc.StreamToNotifySelfInfo.Close()
-	if err != nil {
-		fmt.Println(err)
+	err2 := oc.StreamToNotifySelfInfo.Close()
+	if err2 != nil {
+		fmt.Println(err2)
 	}
 
 	return nil
