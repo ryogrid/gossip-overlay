@@ -189,8 +189,11 @@ func (oc *OverlayClient) OpenStream() (*OverlayStream, error) {
 
 	util.OverlayDebugPrintln("after waiting for server side stream close")
 
-	// resouce releases: stream to notify self info and related resources
-	oc.Close()
+	//// resouce releases: stream to notify self info and related resources
+	//oc.Close()
+	oc.GossipSessionToNotifySelfInfo = nil
+	oc.OriginalClientObj = nil
+	oc.StreamToNotifySelfInfo = nil
 
 	overlayStream, err3 := oc.establishCtoCStream(streamIdToUse)
 	if err3 != nil {

@@ -146,7 +146,10 @@ func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, error) {
 	ols.gossipSession.RemoteAddress = &PeerAddress{remotePeerName}
 
 	// stream closing is notified to client and client starts establishment of CtoC stream
-	ols.ServerStream.Close()
+	//ols.ServerStream.Close()
+	ols.OriginalServerObj.Abort("for next connection")
+	util.OverlayDebugPrintln("OverlayServer close (temporal trying)")
+	//ols.Close()
 	util.OverlayDebugPrintln("OverlayServer::Accept: closed a server stream to notify CtC stream establishment process starting.")
 	ols.ServerStream = nil
 
@@ -189,12 +192,12 @@ func (ols *OverlayServer) Close() error {
 	ols.gossipSession = nil
 	ols.OriginalServerObj.Close()
 	ols.OriginalServerObj = nil
-	ols.StreamsMtx.Lock()
-	for _, s := range ols.CtoCStreams {
-		s.Close()
-	}
-	ols.CtoCStreams = nil
-	ols.StreamsMtx.Unlock()
+	//ols.StreamsMtx.Lock()
+	//for _, s := range ols.CtoCStreams {
+	//	s.Close()
+	//}
+	//ols.CtoCStreams = nil
+	//ols.StreamsMtx.Unlock()
 
 	return nil
 }
