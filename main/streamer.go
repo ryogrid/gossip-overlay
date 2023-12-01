@@ -139,15 +139,16 @@ func serverRoutine(p *core.Peer) {
 }
 
 func clientRoutine(p *core.Peer, streamId uint16) {
-	stream, err := core.NewOverlayClient(p, p.Destname)
+	util.OverlayDebugPrintln("start clientRoutine")
+	a, err := core.NewOverlayClient(p, p.Destname)
 	if err != nil {
 		panic(err)
 	}
 
-	//stream, err2 := a.OpenStream(streamId)
-	//if err2 != nil {
-	//	panic(err2)
-	//}
+	stream, err2 := a.OpenStream(streamId)
+	if err2 != nil {
+		panic(err2)
+	}
 
 	recvedByte := byte(0)
 
