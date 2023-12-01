@@ -170,32 +170,33 @@ func (oc *OverlayClient) innerOpenStreamToServer() (streamID uint16, err error) 
 	return streamId, nil
 }
 
-func (oc *OverlayClient) OpenStream() (*OverlayStream, error) {
-	streamIdToUse, err := oc.innerOpenStreamToServer()
-	if err != nil {
-		util.OverlayDebugPrintln("err:", err)
-		return nil, err
-	}
+func (oc *OverlayClient) OpenStream(streamId uint16) (*OverlayStream, error) {
+	//streamIdToUse, err := oc.innerOpenStreamToServer()
+	//if err != nil {
+	//	util.OverlayDebugPrintln("err:", err)
+	//	return nil, err
+	//}
+	//
+	//util.OverlayDebugPrintln("before waiting for server side stream close")
+	//
+	//var buf [1]byte
+	//// wait until server side stream close
+	//_, err2 := oc.StreamToNotifySelfInfo.Read(buf[:])
+	//if err2 != nil {
+	//	util.OverlayDebugPrintln("err2:", err2)
+	//	util.OverlayDebugPrintln("may be stream is closed by server side")
+	//}
+	//
+	//util.OverlayDebugPrintln("after waiting for server side stream close")
+	//
+	////// resouce releases: stream to notify self info and related resources
+	////oc.Close()
+	//oc.GossipSessionToNotifySelfInfo = nil
+	//oc.OriginalClientObj = nil
+	//oc.StreamToNotifySelfInfo = nil
 
-	util.OverlayDebugPrintln("before waiting for server side stream close")
-
-	var buf [1]byte
-	// wait until server side stream close
-	_, err2 := oc.StreamToNotifySelfInfo.Read(buf[:])
-	if err2 != nil {
-		util.OverlayDebugPrintln("err2:", err2)
-		util.OverlayDebugPrintln("may be stream is closed by server side")
-	}
-
-	util.OverlayDebugPrintln("after waiting for server side stream close")
-
-	//// resouce releases: stream to notify self info and related resources
-	//oc.Close()
-	oc.GossipSessionToNotifySelfInfo = nil
-	oc.OriginalClientObj = nil
-	oc.StreamToNotifySelfInfo = nil
-
-	overlayStream, err3 := oc.establishCtoCStream(streamIdToUse)
+	//overlayStream, err3 := oc.establishCtoCStream(streamIdToUse)
+	overlayStream, err3 := oc.establishCtoCStream(streamId)
 	if err3 != nil {
 		fmt.Println(err3)
 		return nil, err3

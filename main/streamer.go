@@ -26,6 +26,7 @@ func main() {
 		nickname   = flag.String("nickname", util.MustHostname(), "Peer nickname")
 		channel    = flag.String("channel", "default", "gossip channel name")
 		destname   = flag.String("destname", "", "destination Peer name (optional)")
+		streamID   = flag.String("streamid", "", "stream ID (optional)")
 		debug      = flag.String("debug", "false", "print debug info, true of false (optional)")
 	)
 	flag.Var(peers, "peer", "initial Peer (may be repeated)")
@@ -87,7 +88,12 @@ func main() {
 	if *side == "recv" {
 		go serverRoutine(p)
 	} else if *side == "send" {
-		go clientRoutine(p)
+		convedStreamID, err2 := strconv.ParseUint(*streamID, 10, 16)
+		if err2 != nil {
+			panic(err2)
+		}
+		fmt.Println("convedStreamID:", convedStreamID)
+		go clientRoutine(p, uint16(convedStreamID))
 	}
 
 	logger.Print(<-errs)
@@ -132,16 +138,16 @@ func serverRoutine(p *core.Peer) {
 	}
 }
 
-func clientRoutine(p *core.Peer) {
-	a, err := core.NewOverlayClient(p, p.Destname)
+func clientRoutine(p *core.Peer, streamId uint16) {
+	stream, err := core.NewOverlayClient(p, p.Destname)
 	if err != nil {
 		panic(err)
 	}
 
-	stream, err2 := a.OpenStream()
-	if err2 != nil {
-		panic(err2)
-	}
+	//stream, err2 := a.OpenStream(streamId)
+	//if err2 != nil {
+	//	panic(err2)
+	//}
 
 	recvedByte := byte(0)
 
