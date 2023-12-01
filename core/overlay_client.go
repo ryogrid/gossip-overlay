@@ -113,21 +113,81 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 
 	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
 
-	// wait until SYN is received
-	buf := make([]byte, 2)
-	n, err4 := stream.Read(buf)
-	recvedStreamID := decodeUint16FromBytes(buf)
-	if err4 != nil || n != 2 || recvedStreamID != streamID {
-		fmt.Println("err:", err4, " n:", n, " recvedStreamID:", recvedStreamID)
-		return nil, err4
+	sendACK := func() error {
+		// send ACK
+		sendData := encodeUint16ToBytes(streamID)
+		_, err5 := stream.Write(sendData)
+		if err5 != nil {
+			fmt.Println(err5)
+			//return nil, err5
+			return err5
+		}
+		return nil
 	}
 
-	// send ACK
-	sendData := encodeUint16ToBytes(streamID)
-	_, err5 := stream.Write(sendData)
-	if err5 != nil {
-		fmt.Println(err5)
-		return nil, err5
+	waitSYN := func() error {
+		// wait until SYN is received
+		buf := make([]byte, 2)
+		n, err4 := stream.Read(buf)
+		recvedStreamID := decodeUint16FromBytes(buf)
+		if err4 != nil || n != 2 || recvedStreamID != streamID {
+			fmt.Println("err:", err4, " n:", n, " recvedStreamID:", recvedStreamID)
+			//return nil, err4
+			return err4
+		}
+		return nil
+	}
+
+	sendSYN := func() error {
+		// send SYN
+		sendData := encodeUint16ToBytes(streamID)
+		_, err4_ := stream.Write(sendData)
+		if err4_ != nil {
+			fmt.Println(err4_)
+			//return nil, err4
+			return err4_
+		}
+		return nil
+	}
+
+	waitACK := func() error {
+		// wait until ACK is received
+		buf := make([]byte, 2)
+		n, err5_ := stream.Read(buf)
+		recvedStreamID := decodeUint16FromBytes(buf)
+		if err5_ != nil || n != 2 || recvedStreamID != streamID {
+			fmt.Println("err:", err5_, " n:", n, " recvedStreamID:", recvedStreamID)
+			//return nil, err5
+			return err5_
+		}
+		return nil
+	}
+
+	// TODO: temporal impl
+	if oc.P.Destname == 1 {
+		err = sendSYN()
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		}
+		err = waitACK()
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		}
+	} else if oc.P.Destname == 2 {
+		err = waitSYN()
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		}
+		err = sendACK()
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		}
+	} else {
+		panic("invalid destname")
 	}
 
 	overlayStream := NewOverlayStream(oc.P, stream, a, conn, streamID)
