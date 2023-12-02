@@ -110,17 +110,17 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 		return nil, err3
 	}
 	util.OverlayDebugPrintln("opened a stream for client to client", streamID)
-
+	time.Sleep(1 * time.Second)
 	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
 
-	sendACK := func() error {
-		// send ACK
+	sendSYN := func() error {
+		// send SYN
 		sendData := encodeUint16ToBytes(streamID)
-		_, err5 := stream.Write(sendData)
-		if err5 != nil {
-			fmt.Println(err5)
-			//return nil, err5
-			return err5
+		_, err4_ := stream.Write(sendData)
+		if err4_ != nil {
+			fmt.Println(err4_)
+			//return nil, err4
+			return err4_
 		}
 		return nil
 	}
@@ -138,14 +138,14 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 		return nil
 	}
 
-	sendSYN := func() error {
-		// send SYN
+	sendACK := func() error {
+		// send ACK
 		sendData := encodeUint16ToBytes(streamID)
-		_, err4_ := stream.Write(sendData)
-		if err4_ != nil {
-			fmt.Println(err4_)
-			//return nil, err4
-			return err4_
+		_, err5 := stream.Write(sendData)
+		if err5 != nil {
+			fmt.Println(err5)
+			//return nil, err5
+			return err5
 		}
 		return nil
 	}
@@ -165,22 +165,26 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 
 	// TODO: temporal impl
 	if oc.P.Destname == 1 {
+		util.OverlayDebugPrintln("before send SYN")
 		err = sendSYN()
 		if err != nil {
 			fmt.Println(err)
 			return nil, err
 		}
+		util.OverlayDebugPrintln("start wait ACK")
 		err = waitACK()
 		if err != nil {
 			fmt.Println(err)
 			return nil, err
 		}
 	} else if oc.P.Destname == 2 {
+		util.OverlayDebugPrintln("start wait SYN")
 		err = waitSYN()
 		if err != nil {
 			fmt.Println(err)
 			return nil, err
 		}
+		util.OverlayDebugPrintln("before send ACK")
 		err = sendACK()
 		if err != nil {
 			fmt.Println(err)
@@ -191,6 +195,7 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 	}
 
 	overlayStream := NewOverlayStream(oc.P, stream, a, conn, streamID)
+	util.OverlayDebugPrintln("established a OverlayStream")
 
 	return overlayStream, nil
 }

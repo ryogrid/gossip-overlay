@@ -100,35 +100,35 @@ func (gdm *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16, opSi
 	val.Buf = make([]byte, 0)
 	val.Mtx.Unlock()
 
-	val.ReadMtx.Lock()
-	util.OverlayDebugPrintln("GossipDataManager.Read called: before checking length of retBase loop.")
-	if len(copiedBuf) == 0 {
-		for {
-			if storedBuf, ok := gdm.LoadBuffer(fromPeer, streamID, opSide); ok {
-				// wait unitl data received
-				//storedBuf.Mtx.Lock()
-				if len(storedBuf.Buf) > 0 {
-					// end waiting
-					//storedBuf.Mtx.Unlock()
-					break
-				}
-				//storedBuf.Mtx.Unlock()
-				time.Sleep(1 * time.Millisecond)
-			} else {
-				util.OverlayDebugPrintln("GossipDataManager.Read: waiting end because GossipSession should closed.")
-				val.ReadMtx.Unlock()
-				//return make([]byte, 0)
-				return nil
-			}
-		}
-
-		storedBuf, _ := gdm.LoadBuffer(fromPeer, streamID, opSide)
-		copiedBuf = append(copiedBuf, storedBuf.Buf...)
-		storedBuf.Buf = make([]byte, 0)
-		gdm.StoreBuffer(fromPeer, streamID, opSide, storedBuf)
-	}
-	val.ReadMtx.Unlock()
-	util.OverlayDebugPrintln("GossipDataManager.Read called: after checking length of retBase loop.")
+	//val.ReadMtx.Lock()
+	//util.OverlayDebugPrintln("GossipDataManager.Read called: before checking length of retBase loop.")
+	//if len(copiedBuf) == 0 {
+	//	for {
+	//		if storedBuf, ok := gdm.LoadBuffer(fromPeer, streamID, opSide); ok {
+	//			// wait unitl data received
+	//			//storedBuf.Mtx.Lock()
+	//			if len(storedBuf.Buf) > 0 {
+	//				// end waiting
+	//				//storedBuf.Mtx.Unlock()
+	//				break
+	//			}
+	//			//storedBuf.Mtx.Unlock()
+	//			time.Sleep(1 * time.Millisecond)
+	//		} else {
+	//			util.OverlayDebugPrintln("GossipDataManager.Read: waiting end because GossipSession should closed.")
+	//			val.ReadMtx.Unlock()
+	//			//return make([]byte, 0)
+	//			return nil
+	//		}
+	//	}
+	//
+	//	storedBuf, _ := gdm.LoadBuffer(fromPeer, streamID, opSide)
+	//	copiedBuf = append(copiedBuf, storedBuf.Buf...)
+	//	storedBuf.Buf = make([]byte, 0)
+	//	gdm.StoreBuffer(fromPeer, streamID, opSide, storedBuf)
+	//}
+	//val.ReadMtx.Unlock()
+	//util.OverlayDebugPrintln("GossipDataManager.Read called: after checking length of retBase loop.")
 
 	util.OverlayDebugPrintln("GossipDataManager.Read called: end. fromPeer:", fromPeer, " streamID", streamID, " copiedBuf:", copiedBuf)
 	return copiedBuf
