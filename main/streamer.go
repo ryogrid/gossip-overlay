@@ -6,6 +6,7 @@ import (
 	"github.com/ryogrid/gossip-overlay/core"
 	"github.com/ryogrid/gossip-overlay/overlay_setting"
 	"github.com/ryogrid/gossip-overlay/util"
+	"github.com/ryogrid/sctp"
 	"github.com/weaveworks/mesh"
 	"log"
 	"math"
@@ -86,7 +87,7 @@ func main() {
 	}()
 
 	if *side == "recv" {
-		go serverRoutine(p)
+		//go serverRoutine(p)
 	} else if *side == "send" {
 		convedStreamID, err2 := strconv.ParseUint(*streamID, 10, 16)
 		if err2 != nil {
@@ -99,44 +100,44 @@ func main() {
 	logger.Print(<-errs)
 }
 
-func serverRoutine(p *core.Peer) {
-	server, err := core.NewOverlayServer(p)
-	if err != nil {
-		panic(err)
-	}
-
-	for {
-		overlayStream, remotePeer, err2 := server.Accept()
-		fmt.Println("overlay overlayStream accepted from ", remotePeer)
-		if err2 != nil {
-			panic(err2)
-		}
-
-		go func(stream_ *core.OverlayStream) {
-			var pongSeqNum = 100
-			for {
-				buff := make([]byte, 1024)
-				util.OverlayDebugPrintln("before overlayStream.Read")
-				_, err = overlayStream.Read(buff)
-				util.OverlayDebugPrintln("after overlayStream.Read", err, buff)
-				if err != nil {
-					panic(err)
-				}
-				fmt.Println("received:", buff[0])
-
-				sendBuf := []byte{byte(pongSeqNum % 255), buff[0]}
-				_, err = overlayStream.Write(sendBuf)
-				if err != nil {
-					panic(err)
-				}
-				fmt.Println("sent:", sendBuf[0], sendBuf[1])
-				pongSeqNum++
-
-				time.Sleep(time.Second)
-			}
-		}(overlayStream)
-	}
-}
+//func serverRoutine(p *core.Peer) {
+//	server, err := core.NewOverlayServer(p)
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	for {
+//		overlayStream, remotePeer, err2 := server.Accept()
+//		fmt.Println("overlay overlayStream accepted from ", remotePeer)
+//		if err2 != nil {
+//			panic(err2)
+//		}
+//
+//		go func(stream_ *core.OverlayStream) {
+//			var pongSeqNum = 100
+//			for {
+//				buff := make([]byte, 1024)
+//				util.OverlayDebugPrintln("before overlayStream.Read")
+//				_, err = overlayStream.Read(buff)
+//				util.OverlayDebugPrintln("after overlayStream.Read", err, buff)
+//				if err != nil {
+//					panic(err)
+//				}
+//				fmt.Println("received:", buff[0])
+//
+//				sendBuf := []byte{byte(pongSeqNum % 255), buff[0]}
+//				_, err = overlayStream.Write(sendBuf)
+//				if err != nil {
+//					panic(err)
+//				}
+//				fmt.Println("sent:", sendBuf[0], sendBuf[1])
+//				pongSeqNum++
+//
+//				time.Sleep(time.Second)
+//			}
+//		}(overlayStream)
+//	}
+//}
 
 func clientRoutine(p *core.Peer, streamId uint16) {
 	util.OverlayDebugPrintln("start clientRoutine")
@@ -152,29 +153,83 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 
 	recvedByte := byte(0)
 
-	go func() {
-		var pingSeqNum int
-		for {
-			_, err = stream.Write([]byte{byte(pingSeqNum % 255), recvedByte})
-			if err != nil {
-				//log.Panic(err)
-				panic(err)
+	// TODO: temporal impl
+	if p.Destname == 1 {
+		go func() {
+			var pingSeqNum int
+			for {
+				_, err = stream.WriteSCTP([]byte{byte(pingSeqNum % 255), recvedByte}, sctp.PayloadTypeWebRTCBinary)
+				if err != nil {
+					//log.Panic(err)
+					panic(err)
+				}
+
+				fmt.Println("sent:", pingSeqNum%255, recvedByte)
+
+				pingSeqNum++
+
+				time.Sleep(3 * time.Second)
 			}
-			fmt.Println("sent:", pingSeqNum%255, recvedByte)
+		}()
+	} else if p.Destname == 2 {
 
-			pingSeqNum++
+		for {
+			wrappedRead(stream)
+			//buff := make([]byte, 1024)
+			//
+			//_, _, err = stream.ReadSCTP(buff)
+			//if err != nil {
+			//	//log.Panic(err)
+			//	panic(err)
+			//}
+			//fmt.Println("received:", buff[0], buff[1])
+		}
+	} else {
+		panic("invalid destname")
+	}
 
-			time.Sleep(3 * time.Second)
+	//go func() {
+	//	var pingSeqNum int
+	//	for {
+	//		_, err = stream.WriteSCTP([]byte{byte(pingSeqNum % 255), recvedByte}, sctp.PayloadTypeWebRTCBinary)
+	//		if err != nil {
+	//			//log.Panic(err)
+	//			panic(err)
+	//		}
+	//
+	//		fmt.Println("sent:", pingSeqNum%255, recvedByte)
+	//
+	//		pingSeqNum++
+	//
+	//		time.Sleep(3 * time.Second)
+	//	}
+	//}()
+	//
+	//for {
+	//	buff := make([]byte, 1024)
+	//	_, _, err = stream.ReadSCTP(buff)
+	//	if err != nil {
+	//		//log.Panic(err)
+	//		panic(err)
+	//	}
+	//	fmt.Println("received:", buff[0], buff[1])
+	//}
+}
+
+func wrappedRead(stream *core.OverlayStream) {
+	defer func() {
+		if err3 := recover(); err3 != nil {
+			util.OverlayDebugPrintln("panic catched: %v", err3)
 		}
 	}()
 
-	for {
-		buff := make([]byte, 1024)
-		_, err = stream.Read(buff)
-		if err != nil {
-			//log.Panic(err)
-			panic(err)
-		}
-		fmt.Println("received:", buff[0], buff[1])
-	}
+	buff := make([]byte, 1024)
+	stream.ReadSCTP(buff)
+	return
+	//_, _, err = stream.ReadSCTP(buff)
+	//if err != nil {
+	//	//log.Panic(err)
+	//	panic(err)
+	//}
+	//fmt.Println("received:", buff[0], buff[1])
 }

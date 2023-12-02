@@ -2,7 +2,7 @@ package core
 
 import (
 	"fmt"
-	"github.com/pion/sctp"
+	"github.com/ryogrid/sctp"
 	"github.com/weaveworks/mesh"
 )
 
