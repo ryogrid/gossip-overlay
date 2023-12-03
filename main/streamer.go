@@ -145,7 +145,7 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 		panic(err)
 	}
 
-	stream, err2 := a.OpenStream(streamId)
+	stream1, stream2, err2 := a.OpenStream(streamId)
 	if err2 != nil {
 		panic(err2)
 	}
@@ -153,28 +153,46 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 	recvedByte := byte(0)
 
 	// TODO: temporal impl
-	if p.Destname == 1 { // accept side
+	if p.GossipDataMan.Self == 1 { //  reader
 		for {
 			buff := make([]byte, 1024)
-			_, _, err = stream.ReadDataChannel(buff)
+			_, _, err = stream1.ReadDataChannel(buff)
 			if err != nil {
 				//log.Panic(err)
 				panic(err)
 			}
 			fmt.Println("received:", buff[0], buff[1])
 		}
-	} else if p.Destname == 2 { // dial side
+	} else if p.GossipDataMan.Self == 2 { // writer and reader
 		var pingSeqNum int
 		for {
 			//_, err = stream.WriteSCTP([]byte{byte(pingSeqNum % 255), recvedByte}, sctp.PayloadTypeWebRTCBinary)
-			_, err = stream.WriteDataChannel([]byte{byte(pingSeqNum % 255), recvedByte}, false)
+			_, err = stream1.WriteDataChannel([]byte{byte(pingSeqNum % 255), recvedByte}, false)
 			if err != nil {
 				//log.Panic(err)
 				panic(err)
 			}
-
 			fmt.Println("sent:", pingSeqNum%255, recvedByte)
+			pingSeqNum++
 
+			buff := make([]byte, 1024)
+			_, _, err = stream2.ReadDataChannel(buff)
+			if err != nil {
+				//log.Panic(err)
+				panic(err)
+			}
+			fmt.Println("received:", buff[0], buff[1])
+		}
+	} else if p.GossipDataMan.Self == 3 { // writer
+		var pingSeqNum int
+		for {
+			//_, err = stream.WriteSCTP([]byte{byte(pingSeqNum % 255), recvedByte}, sctp.PayloadTypeWebRTCBinary)
+			_, err = stream1.WriteDataChannel([]byte{byte(pingSeqNum % 255), recvedByte}, false)
+			if err != nil {
+				//log.Panic(err)
+				panic(err)
+			}
+			fmt.Println("sent:", pingSeqNum%255, recvedByte)
 			pingSeqNum++
 
 			time.Sleep(3 * time.Second)

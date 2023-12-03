@@ -286,11 +286,8 @@ func (gdm *GossipDataManager) NewGossipSessionForClientToClient(remotePeer mesh.
 
 func (gdm *GossipDataManager) NewGossipSessionForServer() (*GossipSession, error) {
 	ret := &GossipSession{
-		LocalAddress:  &PeerAddress{gdm.Self},
-		RemoteAddress: &PeerAddress{math.MaxUint64},
-		//RemoteAddress:      make([]*PeerAddress, 0),
-		//RemoteAddressesMtx: &sync.Mutex{},
-		//SessMtx:     sync.RWMutex{},
+		LocalAddress:      &PeerAddress{gdm.Self},
+		RemoteAddress:     &PeerAddress{math.MaxUint64},
 		GossipDM:          gdm,
 		LocalSessionSide:  ServerSide,
 		RemoteSessionSide: ClientSide,

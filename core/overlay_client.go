@@ -87,9 +87,8 @@ func genRandomStreamId() uint16 {
 	return uint16(randGen.Uint32())
 }
 
-// func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, error) {
-func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.DataChannel, error) {
-	conn, err := oc.P.GossipDataMan.NewGossipSessionForClientToClient(oc.RemotePeerName, streamID)
+func (oc *OverlayClient) establishCtoCStreamInner(remotePeerName mesh.PeerName, streamID uint16) (*sctp.Association, error) {
+	conn, err := oc.P.GossipDataMan.NewGossipSessionForClientToClient(remotePeerName, streamID)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -106,13 +105,35 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 		return nil, err2
 	}
 
-	stream, err3 := a.OpenStream(streamID, sctp.PayloadTypeWebRTCBinary)
-	if err3 != nil {
-		fmt.Println(err3)
-		return nil, err3
+	//stream, err3 := a.OpenStream(streamID, sctp.PayloadTypeWebRTCBinary)
+	//if err3 != nil {
+	//	fmt.Println(err3)
+	//	return nil, err3
+	//}
+
+	return a, nil
+}
+
+// func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, error) {
+func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.DataChannel, *datachannel.DataChannel, error) {
+	var a1 *sctp.Association = nil
+	var a2_1 *sctp.Association = nil
+	var a2_2 *sctp.Association = nil
+	var a3 *sctp.Association = nil
+
+	if oc.P.GossipDataMan.Self == 1 { // dial side (to peer-2)
+		a1, _ = oc.establishCtoCStreamInner(oc.RemotePeerName, 1)
+	} else if oc.P.GossipDataMan.Self == 2 { // accept side x 2 (from peer1 and peer3)
+		a2_1, _ = oc.establishCtoCStreamInner(oc.RemotePeerName, 1)
+		a2_2, _ = oc.establishCtoCStreamInner(3, 2)
+	} else if oc.P.GossipDataMan.Self == 3 { // dial side (to peer-2)
+		a3, _ = oc.establishCtoCStreamInner(oc.RemotePeerName, 2)
+	} else {
+		panic("invalid destname")
 	}
+
 	util.OverlayDebugPrintln("opened a stream for client to client", streamID)
-	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
+	//stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
 
 	//sendSYN := func() error {
 	//	// send SYN
@@ -165,10 +186,12 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 	//}
 
 	loggerFactory := logging.NewDefaultLoggerFactory()
-	var dc *datachannel.DataChannel
+	var dc1 *datachannel.DataChannel = nil
+	var dc2 *datachannel.DataChannel = nil
+	var err error = nil
 
 	// TODO: temporal impl
-	if oc.P.Destname == 1 { // dial side
+	if oc.P.GossipDataMan.Self == 1 { // dial side (to peer-2)
 		cfg := &datachannel.Config{
 			ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
 			ReliabilityParameter: 0,
@@ -176,41 +199,36 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 			LoggerFactory:        loggerFactory,
 		}
 
-		dc, err = datachannel.Dial(a, 100, cfg)
+		dc1, err = datachannel.Dial(a1, 100, cfg)
 		if err != nil {
 			panic(err)
 		}
-		//util.OverlayDebugPrintln("before send SYN")
-		//err = sendSYN()
-		//if err != nil {
-		//	fmt.Println(err)
-		//	return nil, err
-		//}
-		//util.OverlayDebugPrintln("start wait ACK")
-		//err = waitACK()
-		//if err != nil {
-		//	fmt.Println(err)
-		//	return nil, err
-		//}
-	} else if oc.P.Destname == 2 { // accept side
-		dc, err = datachannel.Accept(a, &datachannel.Config{
+	} else if oc.P.GossipDataMan.Self == 2 { // accept side x 2 (from peer1 and peer3)
+		dc1, err = datachannel.Accept(a2_1, &datachannel.Config{
 			LoggerFactory: loggerFactory,
 		})
 		if err != nil {
 			panic(err)
 		}
-		//util.OverlayDebugPrintln("start wait SYN")
-		//err = waitSYN()
-		//if err != nil {
-		//	fmt.Println(err)
-		//	return nil, err
-		//}
-		//util.OverlayDebugPrintln("before send ACK")
-		//err = sendACK()
-		//if err != nil {
-		//	fmt.Println(err)
-		//	return nil, err
-		//}
+
+		dc2, err = datachannel.Accept(a2_2, &datachannel.Config{
+			LoggerFactory: loggerFactory,
+		})
+		if err != nil {
+			panic(err)
+		}
+	} else if oc.P.GossipDataMan.Self == 3 { // dial side (to peer-2)
+		cfg := &datachannel.Config{
+			ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
+			ReliabilityParameter: 0,
+			Label:                "data",
+			LoggerFactory:        loggerFactory,
+		}
+
+		dc1, err = datachannel.Dial(a3, 101, cfg)
+		if err != nil {
+			panic(err)
+		}
 	} else {
 		panic("invalid destname")
 	}
@@ -219,7 +237,7 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 	util.OverlayDebugPrintln("established a OverlayStream")
 
 	//return overlayStream, nil
-	return dc, nil
+	return dc1, dc2, nil
 }
 
 //func (oc *OverlayClient) innerOpenStreamToServer() (streamID uint16, err error) {
@@ -258,7 +276,7 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 //}
 
 // func (oc *OverlayClient) OpenStream(streamId uint16) (*OverlayStream, error) {
-func (oc *OverlayClient) OpenStream(streamId uint16) (*datachannel.DataChannel, error) {
+func (oc *OverlayClient) OpenStream(streamId uint16) (*datachannel.DataChannel, *datachannel.DataChannel, error) {
 	//streamIdToUse, err := oc.innerOpenStreamToServer()
 	//if err != nil {
 	//	util.OverlayDebugPrintln("err:", err)
@@ -284,15 +302,15 @@ func (oc *OverlayClient) OpenStream(streamId uint16) (*datachannel.DataChannel, 
 	//oc.StreamToNotifySelfInfo = nil
 
 	//overlayStream, err3 := oc.establishCtoCStream(streamIdToUse)
-	overlayStream, err3 := oc.establishCtoCStream(streamId)
+	overlayStream1, overlayStream2, err3 := oc.establishCtoCStream(streamId)
 	if err3 != nil {
 		fmt.Println(err3)
-		return nil, err3
+		return nil, nil, err3
 	}
 
 	util.OverlayDebugPrintln("end of OverlayClient::OpenStream")
 
-	return overlayStream, nil
+	return overlayStream1, overlayStream2, nil
 }
 
 func (oc *OverlayClient) Close() error {
