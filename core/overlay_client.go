@@ -115,7 +115,7 @@ func (oc *OverlayClient) establishCtoCStreamInner(remotePeerName mesh.PeerName, 
 }
 
 // func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, error) {
-func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.DataChannel, *datachannel.DataChannel, error) {
+func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.DataChannel, *datachannel.DataChannel, *sctp.Association, error) {
 	var a1 *sctp.Association = nil
 	var a2_1 *sctp.Association = nil
 	var a2_2 *sctp.Association = nil
@@ -219,7 +219,8 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 		}
 	} else if oc.P.GossipDataMan.Self == 3 { // dial side (to peer-2)
 		cfg := &datachannel.Config{
-			ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
+			//ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
+			ChannelType:          datachannel.ChannelTypeReliable,
 			ReliabilityParameter: 0,
 			Label:                "data",
 			LoggerFactory:        loggerFactory,
@@ -237,7 +238,7 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 	util.OverlayDebugPrintln("established a OverlayStream")
 
 	//return overlayStream, nil
-	return dc1, dc2, nil
+	return dc1, dc2, a2_2, nil
 }
 
 //func (oc *OverlayClient) innerOpenStreamToServer() (streamID uint16, err error) {
@@ -276,7 +277,7 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 //}
 
 // func (oc *OverlayClient) OpenStream(streamId uint16) (*OverlayStream, error) {
-func (oc *OverlayClient) OpenStream(streamId uint16) (*datachannel.DataChannel, *datachannel.DataChannel, error) {
+func (oc *OverlayClient) OpenStream(streamId uint16) (*datachannel.DataChannel, *datachannel.DataChannel, *sctp.Association, error) {
 	//streamIdToUse, err := oc.innerOpenStreamToServer()
 	//if err != nil {
 	//	util.OverlayDebugPrintln("err:", err)
@@ -302,15 +303,15 @@ func (oc *OverlayClient) OpenStream(streamId uint16) (*datachannel.DataChannel, 
 	//oc.StreamToNotifySelfInfo = nil
 
 	//overlayStream, err3 := oc.establishCtoCStream(streamIdToUse)
-	overlayStream1, overlayStream2, err3 := oc.establishCtoCStream(streamId)
+	overlayStream1, overlayStream2, a2_2, err3 := oc.establishCtoCStream(streamId)
 	if err3 != nil {
 		fmt.Println(err3)
-		return nil, nil, err3
+		return nil, nil, nil, err3
 	}
 
 	util.OverlayDebugPrintln("end of OverlayClient::OpenStream")
 
-	return overlayStream1, overlayStream2, nil
+	return overlayStream1, overlayStream2, a2_2, nil
 }
 
 func (oc *OverlayClient) Close() error {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/ryogrid/gossip-overlay/core"
@@ -145,7 +146,7 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 		panic(err)
 	}
 
-	stream1, stream2, err2 := a.OpenStream(streamId)
+	stream1, stream2, a2_2, err2 := a.OpenStream(streamId)
 	if err2 != nil {
 		panic(err2)
 	}
@@ -175,6 +176,15 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 			fmt.Println("sent:", pingSeqNum%255, recvedByte)
 			pingSeqNum++
 
+			// test of close
+			if pingSeqNum == 5 {
+				stream1.Close()
+				stream2.Close()
+				ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
+				a2_2.Shutdown(ctx)
+				panic("Shutdown finished")
+			}
+
 			buff := make([]byte, 1024)
 			_, _, err = stream2.ReadDataChannel(buff)
 			if err != nil {
@@ -187,8 +197,8 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 		var pingSeqNum int
 		for {
 			//_, err = stream.WriteSCTP([]byte{byte(pingSeqNum % 255), recvedByte}, sctp.PayloadTypeWebRTCBinary)
-			_, err = stream1.WriteDataChannel([]byte{byte(pingSeqNum % 255), recvedByte}, false)
-			if err != nil {
+			n, err := stream1.WriteDataChannel([]byte{byte(pingSeqNum % 255), recvedByte}, false)
+			if err != nil || n != 2 {
 				//log.Panic(err)
 				panic(err)
 			}
