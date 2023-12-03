@@ -6,7 +6,6 @@ import (
 	"github.com/ryogrid/gossip-overlay/core"
 	"github.com/ryogrid/gossip-overlay/overlay_setting"
 	"github.com/ryogrid/gossip-overlay/util"
-	"github.com/ryogrid/sctp"
 	"github.com/weaveworks/mesh"
 	"log"
 	"math"
@@ -154,35 +153,31 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 	recvedByte := byte(0)
 
 	// TODO: temporal impl
-	if p.Destname == 1 {
-		go func() {
-			var pingSeqNum int
-			for {
-				_, err = stream.WriteSCTP([]byte{byte(pingSeqNum % 255), recvedByte}, sctp.PayloadTypeWebRTCBinary)
-				if err != nil {
-					//log.Panic(err)
-					panic(err)
-				}
-
-				fmt.Println("sent:", pingSeqNum%255, recvedByte)
-
-				pingSeqNum++
-
-				time.Sleep(3 * time.Second)
-			}
-		}()
-	} else if p.Destname == 2 {
-
+	if p.Destname == 1 { // accept side
 		for {
-			wrappedRead(stream)
-			//buff := make([]byte, 1024)
-			//
-			//_, _, err = stream.ReadSCTP(buff)
-			//if err != nil {
-			//	//log.Panic(err)
-			//	panic(err)
-			//}
-			//fmt.Println("received:", buff[0], buff[1])
+			buff := make([]byte, 1024)
+			_, _, err = stream.ReadDataChannel(buff)
+			if err != nil {
+				//log.Panic(err)
+				panic(err)
+			}
+			fmt.Println("received:", buff[0], buff[1])
+		}
+	} else if p.Destname == 2 { // dial side
+		var pingSeqNum int
+		for {
+			//_, err = stream.WriteSCTP([]byte{byte(pingSeqNum % 255), recvedByte}, sctp.PayloadTypeWebRTCBinary)
+			_, err = stream.WriteDataChannel([]byte{byte(pingSeqNum % 255), recvedByte}, false)
+			if err != nil {
+				//log.Panic(err)
+				panic(err)
+			}
+
+			fmt.Println("sent:", pingSeqNum%255, recvedByte)
+
+			pingSeqNum++
+
+			time.Sleep(3 * time.Second)
 		}
 	} else {
 		panic("invalid destname")
@@ -214,22 +209,4 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 	//	}
 	//	fmt.Println("received:", buff[0], buff[1])
 	//}
-}
-
-func wrappedRead(stream *core.OverlayStream) {
-	defer func() {
-		if err3 := recover(); err3 != nil {
-			util.OverlayDebugPrintln("panic catched: %v", err3)
-		}
-	}()
-
-	buff := make([]byte, 1024)
-	stream.ReadSCTP(buff)
-	return
-	//_, _, err = stream.ReadSCTP(buff)
-	//if err != nil {
-	//	//log.Panic(err)
-	//	panic(err)
-	//}
-	//fmt.Println("received:", buff[0], buff[1])
 }

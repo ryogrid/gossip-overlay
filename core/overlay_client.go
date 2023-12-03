@@ -5,9 +5,10 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/pion/datachannel"
 	"github.com/pion/logging"
+	"github.com/pion/sctp"
 	"github.com/ryogrid/gossip-overlay/util"
-	"github.com/ryogrid/sctp"
 	"github.com/weaveworks/mesh"
 	"math/rand"
 	"time"
@@ -86,7 +87,8 @@ func genRandomStreamId() uint16 {
 	return uint16(randGen.Uint32())
 }
 
-func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, error) {
+// func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, error) {
+func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.DataChannel, error) {
 	conn, err := oc.P.GossipDataMan.NewGossipSessionForClientToClient(oc.RemotePeerName, streamID)
 	if err != nil {
 		fmt.Println(err)
@@ -110,94 +112,114 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 		return nil, err3
 	}
 	util.OverlayDebugPrintln("opened a stream for client to client", streamID)
-	time.Sleep(1 * time.Second)
 	stream.SetReliabilityParams(false, sctp.ReliabilityTypeReliable, 0)
 
-	sendSYN := func() error {
-		// send SYN
-		sendData := encodeUint16ToBytes(streamID)
-		_, err4_ := stream.Write(sendData)
-		if err4_ != nil {
-			fmt.Println(err4_)
-			//return nil, err4
-			return err4_
-		}
-		return nil
-	}
+	//sendSYN := func() error {
+	//	// send SYN
+	//	sendData := encodeUint16ToBytes(streamID)
+	//	_, err4_ := stream.Write(sendData)
+	//	if err4_ != nil {
+	//		fmt.Println(err4_)
+	//		//return nil, err4
+	//		return err4_
+	//	}
+	//	return nil
+	//}
+	//
+	//waitSYN := func() error {
+	//	// wait until SYN is received
+	//	buf := make([]byte, 2)
+	//	n, err4 := stream.Read(buf)
+	//	recvedStreamID := decodeUint16FromBytes(buf)
+	//	if err4 != nil || n != 2 || recvedStreamID != streamID {
+	//		fmt.Println("err:", err4, " n:", n, " recvedStreamID:", recvedStreamID)
+	//		//return nil, err4
+	//		return err4
+	//	}
+	//	return nil
+	//}
+	//
+	//sendACK := func() error {
+	//	// send ACK
+	//	sendData := encodeUint16ToBytes(streamID)
+	//	_, err5 := stream.Write(sendData)
+	//	if err5 != nil {
+	//		fmt.Println(err5)
+	//		//return nil, err5
+	//		return err5
+	//	}
+	//	return nil
+	//}
+	//
+	//waitACK := func() error {
+	//	// wait until ACK is received
+	//	buf := make([]byte, 2)
+	//	n, err5_ := stream.Read(buf)
+	//	recvedStreamID := decodeUint16FromBytes(buf)
+	//	if err5_ != nil || n != 2 || recvedStreamID != streamID {
+	//		fmt.Println("err:", err5_, " n:", n, " recvedStreamID:", recvedStreamID)
+	//		//return nil, err5
+	//		return err5_
+	//	}
+	//	return nil
+	//}
 
-	waitSYN := func() error {
-		// wait until SYN is received
-		buf := make([]byte, 2)
-		n, err4 := stream.Read(buf)
-		recvedStreamID := decodeUint16FromBytes(buf)
-		if err4 != nil || n != 2 || recvedStreamID != streamID {
-			fmt.Println("err:", err4, " n:", n, " recvedStreamID:", recvedStreamID)
-			//return nil, err4
-			return err4
-		}
-		return nil
-	}
-
-	sendACK := func() error {
-		// send ACK
-		sendData := encodeUint16ToBytes(streamID)
-		_, err5 := stream.Write(sendData)
-		if err5 != nil {
-			fmt.Println(err5)
-			//return nil, err5
-			return err5
-		}
-		return nil
-	}
-
-	waitACK := func() error {
-		// wait until ACK is received
-		buf := make([]byte, 2)
-		n, err5_ := stream.Read(buf)
-		recvedStreamID := decodeUint16FromBytes(buf)
-		if err5_ != nil || n != 2 || recvedStreamID != streamID {
-			fmt.Println("err:", err5_, " n:", n, " recvedStreamID:", recvedStreamID)
-			//return nil, err5
-			return err5_
-		}
-		return nil
-	}
+	loggerFactory := logging.NewDefaultLoggerFactory()
+	var dc *datachannel.DataChannel
 
 	// TODO: temporal impl
-	if oc.P.Destname == 1 {
-		util.OverlayDebugPrintln("before send SYN")
-		err = sendSYN()
-		if err != nil {
-			fmt.Println(err)
-			return nil, err
+	if oc.P.Destname == 1 { // dial side
+		cfg := &datachannel.Config{
+			ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
+			ReliabilityParameter: 0,
+			Label:                "data",
+			LoggerFactory:        loggerFactory,
 		}
-		util.OverlayDebugPrintln("start wait ACK")
-		err = waitACK()
+
+		dc, err = datachannel.Dial(a, 100, cfg)
 		if err != nil {
-			fmt.Println(err)
-			return nil, err
+			panic(err)
 		}
-	} else if oc.P.Destname == 2 {
-		util.OverlayDebugPrintln("start wait SYN")
-		err = waitSYN()
+		//util.OverlayDebugPrintln("before send SYN")
+		//err = sendSYN()
+		//if err != nil {
+		//	fmt.Println(err)
+		//	return nil, err
+		//}
+		//util.OverlayDebugPrintln("start wait ACK")
+		//err = waitACK()
+		//if err != nil {
+		//	fmt.Println(err)
+		//	return nil, err
+		//}
+	} else if oc.P.Destname == 2 { // accept side
+		dc, err = datachannel.Accept(a, &datachannel.Config{
+			LoggerFactory: loggerFactory,
+		})
 		if err != nil {
-			fmt.Println(err)
-			return nil, err
+			panic(err)
 		}
-		util.OverlayDebugPrintln("before send ACK")
-		err = sendACK()
-		if err != nil {
-			fmt.Println(err)
-			return nil, err
-		}
+		//util.OverlayDebugPrintln("start wait SYN")
+		//err = waitSYN()
+		//if err != nil {
+		//	fmt.Println(err)
+		//	return nil, err
+		//}
+		//util.OverlayDebugPrintln("before send ACK")
+		//err = sendACK()
+		//if err != nil {
+		//	fmt.Println(err)
+		//	return nil, err
+		//}
 	} else {
 		panic("invalid destname")
 	}
 
-	overlayStream := NewOverlayStream(oc.P, stream, a, conn, streamID)
+	//overlayStream := NewOverlayStream(oc.P, stream, a, conn, streamID)
 	util.OverlayDebugPrintln("established a OverlayStream")
 
-	return overlayStream, nil
+	//return overlayStream, nil
+	return dc, nil
 }
 
 //func (oc *OverlayClient) innerOpenStreamToServer() (streamID uint16, err error) {
@@ -235,7 +257,8 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 //	return streamId, nil
 //}
 
-func (oc *OverlayClient) OpenStream(streamId uint16) (*OverlayStream, error) {
+// func (oc *OverlayClient) OpenStream(streamId uint16) (*OverlayStream, error) {
+func (oc *OverlayClient) OpenStream(streamId uint16) (*datachannel.DataChannel, error) {
 	//streamIdToUse, err := oc.innerOpenStreamToServer()
 	//if err != nil {
 	//	util.OverlayDebugPrintln("err:", err)
