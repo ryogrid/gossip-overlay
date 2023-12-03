@@ -18,6 +18,11 @@ import (
 	"time"
 )
 
+/*
+.\streamer.exe -side send -hwaddr 00:00:00:00:00:01 -nickname a -mesh :6001 -destname 2 -streamid 1 -debug false | Tee-Object -FilePath ".\send1-101.txt"
+.\streamer.exe -side send -hwaddr 00:00:00:00:00:02 -nickname b -mesh :6002 -destname 1 -streamid 1 -peer 127.0.0.1:6001 -debug false | Tee-Object -FilePath ".\send2-101.txt"
+.\streamer.exe -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -destname 2 -streamid 1 -peer 127.0.0.1:6002 -debug false | Tee-Object -FilePath ".\send3-101.txt"
+*/
 func main() {
 	peers := &util.Stringset{}
 	var (
@@ -86,58 +91,19 @@ func main() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
-	if *side == "recv" {
-		//go serverRoutine(p)
-	} else if *side == "send" {
+	if *side == "send" {
 		convedStreamID, err2 := strconv.ParseUint(*streamID, 10, 16)
 		if err2 != nil {
 			panic(err2)
 		}
 		fmt.Println("convedStreamID:", convedStreamID)
 		go clientRoutine(p, uint16(convedStreamID))
+	} else {
+		panic("invalid side")
 	}
 
 	logger.Print(<-errs)
 }
-
-//func serverRoutine(p *core.Peer) {
-//	server, err := core.NewOverlayServer(p)
-//	if err != nil {
-//		panic(err)
-//	}
-//
-//	for {
-//		overlayStream, remotePeer, err2 := server.Accept()
-//		fmt.Println("overlay overlayStream accepted from ", remotePeer)
-//		if err2 != nil {
-//			panic(err2)
-//		}
-//
-//		go func(stream_ *core.OverlayStream) {
-//			var pongSeqNum = 100
-//			for {
-//				buff := make([]byte, 1024)
-//				util.OverlayDebugPrintln("before overlayStream.Read")
-//				_, err = overlayStream.Read(buff)
-//				util.OverlayDebugPrintln("after overlayStream.Read", err, buff)
-//				if err != nil {
-//					panic(err)
-//				}
-//				fmt.Println("received:", buff[0])
-//
-//				sendBuf := []byte{byte(pongSeqNum % 255), buff[0]}
-//				_, err = overlayStream.Write(sendBuf)
-//				if err != nil {
-//					panic(err)
-//				}
-//				fmt.Println("sent:", sendBuf[0], sendBuf[1])
-//				pongSeqNum++
-//
-//				time.Sleep(time.Second)
-//			}
-//		}(overlayStream)
-//	}
-//}
 
 func clientRoutine(p *core.Peer, streamId uint16) {
 	util.OverlayDebugPrintln("start clientRoutine")
@@ -178,20 +144,22 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 
 			// test of close
 			if pingSeqNum == 5 {
-				stream1.Close()
+				//stream1.Close()
 				stream2.Close()
 				ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
 				a2_2.Shutdown(ctx)
-				panic("Shutdown finished")
+				//panic("Shutdown finished")
 			}
 
-			buff := make([]byte, 1024)
-			_, _, err = stream2.ReadDataChannel(buff)
-			if err != nil {
-				//log.Panic(err)
-				panic(err)
+			if pingSeqNum < 5 {
+				buff := make([]byte, 1024)
+				_, _, err = stream2.ReadDataChannel(buff)
+				if err != nil {
+					//log.Panic(err)
+					panic(err)
+				}
+				fmt.Println("received:", buff[0], buff[1])
 			}
-			fmt.Println("received:", buff[0], buff[1])
 		}
 	} else if p.GossipDataMan.Self == 3 { // writer
 		var pingSeqNum int
