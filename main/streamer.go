@@ -19,9 +19,8 @@ import (
 )
 
 /*
-.\streamer.exe -side send -hwaddr 00:00:00:00:00:01 -nickname a -mesh :6001 -destname 2 -streamid 1 -debug false | Tee-Object -FilePath ".\send1-101.txt"
-.\streamer.exe -side send -hwaddr 00:00:00:00:00:02 -nickname b -mesh :6002 -destname 1 -streamid 1 -peer 127.0.0.1:6001 -debug false | Tee-Object -FilePath ".\send2-101.txt"
-.\streamer.exe -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -destname 2 -streamid 1 -peer 127.0.0.1:6002 -debug false | Tee-Object -FilePath ".\send3-101.txt"
+.\streamer.exe -side send -hwaddr 00:00:00:00:00:02 -nickname b -mesh :6002 -destname 3 -streamid 1 -debug false | Tee-Object -FilePath ".\send2-104.txt"
+.\streamer.exe -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -destname 2 -streamid 1 -peer 127.0.0.1:6002 -debug false | Tee-Object -FilePath ".\send3-104.txt"
 */
 func main() {
 	peers := &util.Stringset{}
@@ -134,13 +133,15 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 		var pingSeqNum int
 		for {
 			//_, err = stream.WriteSCTP([]byte{byte(pingSeqNum % 255), recvedByte}, sctp.PayloadTypeWebRTCBinary)
-			_, err = stream1.WriteDataChannel([]byte{byte(pingSeqNum % 255), recvedByte}, false)
-			if err != nil {
-				//log.Panic(err)
-				panic(err)
+			if pingSeqNum < 5 {
+				_, err = stream2.WriteDataChannel([]byte{byte(pingSeqNum % 255), recvedByte}, false)
+				if err != nil {
+					//log.Panic(err)
+					panic(err)
+				}
+				fmt.Println("sent:", pingSeqNum%255, recvedByte)
+				pingSeqNum++
 			}
-			fmt.Println("sent:", pingSeqNum%255, recvedByte)
-			pingSeqNum++
 
 			// test of close
 			if pingSeqNum == 5 {
@@ -151,19 +152,38 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 				//panic("Shutdown finished")
 			}
 
+			buff := make([]byte, 1024)
+			_, _, err = stream1.ReadDataChannel(buff)
+			if err != nil {
+				//log.Panic(err)
+				panic(err)
+			}
+			fmt.Println("received:", buff[0], buff[1])
+
+		}
+	} else if p.GossipDataMan.Self == 3 { // reader and writer
+		var pingSeqNum int
+		for {
 			if pingSeqNum < 5 {
 				buff := make([]byte, 1024)
 				_, _, err = stream2.ReadDataChannel(buff)
 				if err != nil {
 					//log.Panic(err)
-					panic(err)
+					fmt.Println("err:", err)
+					continue
 				}
 				fmt.Println("received:", buff[0], buff[1])
 			}
-		}
-	} else if p.GossipDataMan.Self == 3 { // writer
-		var pingSeqNum int
-		for {
+
+			// test of close
+			if pingSeqNum == 5 {
+				//stream1.Close()
+				stream2.Close()
+				//ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
+				//a2_2.Shutdown(ctx)
+				//panic("Shutdown finished")
+			}
+
 			//_, err = stream.WriteSCTP([]byte{byte(pingSeqNum % 255), recvedByte}, sctp.PayloadTypeWebRTCBinary)
 			n, err := stream1.WriteDataChannel([]byte{byte(pingSeqNum % 255), recvedByte}, false)
 			if err != nil || n != 2 {

@@ -119,15 +119,17 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 	var a1 *sctp.Association = nil
 	var a2_1 *sctp.Association = nil
 	var a2_2 *sctp.Association = nil
-	var a3 *sctp.Association = nil
+	var a3_1 *sctp.Association = nil
+	var a3_2 *sctp.Association = nil
 
 	if oc.P.GossipDataMan.Self == 1 { // dial side (to peer-2)
 		a1, _ = oc.establishCtoCStreamInner(oc.RemotePeerName, 1)
 	} else if oc.P.GossipDataMan.Self == 2 { // accept side x 2 (from peer1 and peer3)
 		a2_1, _ = oc.establishCtoCStreamInner(oc.RemotePeerName, 1)
-		a2_2, _ = oc.establishCtoCStreamInner(3, 2)
+		a2_2, _ = oc.establishCtoCStreamInner(oc.RemotePeerName, 2)
 	} else if oc.P.GossipDataMan.Self == 3 { // dial side (to peer-2)
-		a3, _ = oc.establishCtoCStreamInner(oc.RemotePeerName, 2)
+		a3_1, _ = oc.establishCtoCStreamInner(oc.RemotePeerName, 1)
+		a3_2, _ = oc.establishCtoCStreamInner(oc.RemotePeerName, 2)
 	} else {
 		panic("invalid destname")
 	}
@@ -203,7 +205,7 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 		if err != nil {
 			panic(err)
 		}
-	} else if oc.P.GossipDataMan.Self == 2 { // accept side x 2 (from peer1 and peer3)
+	} else if oc.P.GossipDataMan.Self == 2 { // accept side and dial side (from peer3 and to peer3)
 		dc1, err = datachannel.Accept(a2_1, &datachannel.Config{
 			LoggerFactory: loggerFactory,
 		})
@@ -211,9 +213,15 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 			panic(err)
 		}
 
-		dc2, err = datachannel.Accept(a2_2, &datachannel.Config{
-			LoggerFactory: loggerFactory,
-		})
+		cfg := &datachannel.Config{
+			//ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
+			ChannelType:          datachannel.ChannelTypeReliable,
+			ReliabilityParameter: 0,
+			Label:                "data",
+			LoggerFactory:        loggerFactory,
+		}
+
+		dc2, err = datachannel.Dial(a2_2, 101, cfg)
 		if err != nil {
 			panic(err)
 		}
@@ -226,7 +234,14 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 			LoggerFactory:        loggerFactory,
 		}
 
-		dc1, err = datachannel.Dial(a3, 101, cfg)
+		dc1, err = datachannel.Dial(a3_1, 100, cfg)
+		if err != nil {
+			panic(err)
+		}
+
+		dc2, err = datachannel.Accept(a3_2, &datachannel.Config{
+			LoggerFactory: loggerFactory,
+		})
 		if err != nil {
 			panic(err)
 		}
