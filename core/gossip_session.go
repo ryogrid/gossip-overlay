@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"github.com/ryogrid/gossip-overlay/util"
 	"math"
 	"net"
@@ -37,6 +38,9 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 		peerName := oc.RemoteAddress.PeerName
 		//oc.RemoteAddressesMtx.Unlock()
 		buf = oc.GossipDM.Read(peerName, oc.StreamID, ClientSide)
+		if buf == nil {
+			return 0, errors.New("session closed")
+		}
 	} else {
 		panic("invalid LocalSessionSide")
 	}

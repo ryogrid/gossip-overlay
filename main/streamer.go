@@ -163,26 +163,29 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 		}
 	} else if p.GossipDataMan.Self == 3 { // reader and writer
 		var pingSeqNum int
+		isErrOccured := false
 		for {
-			if pingSeqNum < 5 {
+			//if pingSeqNum < 5 {
+			if !isErrOccured {
 				buff := make([]byte, 1024)
 				_, _, err = stream2.ReadDataChannel(buff)
 				if err != nil {
 					//log.Panic(err)
 					fmt.Println("err:", err)
+					isErrOccured = true
 					continue
 				}
 				fmt.Println("received:", buff[0], buff[1])
 			}
 
-			// test of close
-			if pingSeqNum == 5 {
-				//stream1.Close()
-				stream2.Close()
-				//ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
-				//a2_2.Shutdown(ctx)
-				//panic("Shutdown finished")
-			}
+			//// test of close
+			//if pingSeqNum == 5 {
+			//	//stream1.Close()
+			//	stream2.Close()
+			//	//ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
+			//	//a2_2.Shutdown(ctx)
+			//	//panic("Shutdown finished")
+			//}
 
 			//_, err = stream.WriteSCTP([]byte{byte(pingSeqNum % 255), recvedByte}, sctp.PayloadTypeWebRTCBinary)
 			n, err := stream1.WriteDataChannel([]byte{byte(pingSeqNum % 255), recvedByte}, false)
