@@ -71,6 +71,11 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 		//for _, peerName := range peerNames {
 		//	oc.GossipDM.SendToRemote(peerName, oc.LocalSessionSide, b)
 		//}
+		if oc.GossipDM.IsInjectPacketLoss {
+			// drop packet
+			oc.GossipDM.IsInjectPacketLoss = false
+			return len(b), nil
+		}
 		oc.GossipDM.SendToRemote(oc.RemoteAddress.PeerName, oc.StreamID, oc.RemoteSessionSide, b)
 	} else if oc.LocalSessionSide == ServerSide {
 		// server side uses LastRecvPeer until StreamToNotifySelfInfo is established

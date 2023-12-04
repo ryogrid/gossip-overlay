@@ -38,6 +38,9 @@ type GossipDataManager struct {
 	Self         mesh.PeerName
 	Peer         *Peer
 	LastRecvPeer mesh.PeerName // for server
+	// for testing
+	// GossipStream check this. When true, drop packet at Write and change flag value to false
+	IsInjectPacketLoss bool
 }
 
 // GossipPacket implements GossipData.
@@ -48,10 +51,11 @@ var _ mesh.GossipData = &GossipPacket{}
 // Other peers will populate us with bufs.
 func NewGossipDataManager(selfname mesh.PeerName) *GossipDataManager {
 	ret := &GossipDataManager{
-		bufs:         sync.Map{},
-		Self:         selfname,
-		Peer:         nil,
-		LastRecvPeer: math.MaxUint64,
+		bufs:               sync.Map{},
+		Self:               selfname,
+		Peer:               nil,
+		LastRecvPeer:       math.MaxUint64,
+		IsInjectPacketLoss: false,
 	}
 	// initialize shared buffer for server side (not used on client side)
 	ret.Write(math.MaxUint64, 0, ServerSide, []byte{})
