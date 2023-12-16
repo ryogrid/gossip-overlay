@@ -6,10 +6,18 @@ import (
 	"github.com/weaveworks/mesh"
 )
 
+type PacketKind uint8
+
+const (
+	PACKET_KIND_DATA PacketKind = iota
+)
+
 type GossipPacket struct {
 	Buf          []byte
 	ReceiverSide OperationSideAt
 	StreamID     uint16
+	SeqNum       uint64
+	PktKind      PacketKind
 }
 
 func (gp GossipPacket) Encode() [][]byte {

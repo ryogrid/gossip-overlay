@@ -71,20 +71,17 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 		//for _, peerName := range peerNames {
 		//	oc.GossipDM.SendToRemote(peerName, oc.LocalSessionSide, b)
 		//}
-		if oc.GossipDM.IsInjectPacketLoss {
-			// drop packet
-			oc.GossipDM.IsInjectPacketLoss = false
-			return len(b), nil
-		}
 		oc.GossipDM.SendToRemote(oc.RemoteAddress.PeerName, oc.StreamID, oc.RemoteSessionSide, b)
 	} else if oc.LocalSessionSide == ServerSide {
-		// server side uses LastRecvPeer until StreamToNotifySelfInfo is established
-		// because remote peer name can't be known until then
-		for oc.GossipDM.LastRecvPeer == math.MaxUint64 {
-			time.Sleep(100 * time.Millisecond)
-		}
-		//oc.GossipDM.SendToRemote(oc.GossipDM.LastRecvPeer, oc.LocalSessionSide, b)
-		oc.GossipDM.SendToRemote(oc.GossipDM.LastRecvPeer, oc.StreamID, oc.RemoteSessionSide, b)
+		// TODO: need to implement (GossipSession::Write)
+
+		//// server side uses LastRecvPeer until StreamToNotifySelfInfo is established
+		//// because remote peer name can't be known until then
+		//for oc.GossipDM.LastRecvPeer == math.MaxUint64 {
+		//	time.Sleep(100 * time.Millisecond)
+		//}
+		////oc.GossipDM.SendToRemote(oc.GossipDM.LastRecvPeer, oc.LocalSessionSide, b)
+		//oc.GossipDM.SendToRemote(oc.GossipDM.LastRecvPeer, oc.StreamID, oc.RemoteSessionSide, b)
 	} else {
 		panic("invalid LocalSessionSide")
 	}
@@ -94,7 +91,7 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 
 // Close closes the conn and releases any Read calls
 func (oc *GossipSession) Close() error {
-	oc.GossipDM.WhenClose(oc.RemoteAddress.PeerName, oc.StreamID)
+	oc.GossipDM.Peer.GossipMM.WhenClose(oc.RemoteAddress.PeerName, oc.StreamID)
 
 	return nil
 }

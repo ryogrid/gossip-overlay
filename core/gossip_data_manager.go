@@ -8,7 +8,6 @@ import (
 	"github.com/weaveworks/mesh"
 	"math"
 	"sync"
-	"time"
 )
 
 type OperationSideAt int
@@ -34,13 +33,9 @@ func NewBufferWithMutex(buf []byte) *BufferWithMutex {
 
 type GossipDataManager struct {
 	// "mesh.PeerName" -> BufferWithMutex
-	bufs         sync.Map
-	Self         mesh.PeerName
-	Peer         *Peer
-	LastRecvPeer mesh.PeerName // for server
-	// for testing
-	// GossipStream check this. When true, drop packet at Write and change flag value to false
-	IsInjectPacketLoss bool
+	bufs sync.Map
+	Self mesh.PeerName
+	Peer *Peer
 }
 
 // GossipPacket implements GossipData.
@@ -51,11 +46,9 @@ var _ mesh.GossipData = &GossipPacket{}
 // Other peers will populate us with bufs.
 func NewGossipDataManager(selfname mesh.PeerName) *GossipDataManager {
 	ret := &GossipDataManager{
-		bufs:               sync.Map{},
-		Self:               selfname,
-		Peer:               nil,
-		LastRecvPeer:       math.MaxUint64,
-		IsInjectPacketLoss: false,
+		bufs: sync.Map{},
+		Self: selfname,
+		Peer: nil,
 	}
 	// initialize shared buffer for server side (not used on client side)
 	ret.Write(math.MaxUint64, 0, ServerSide, []byte{})
@@ -172,39 +165,6 @@ func (gdm *GossipDataManager) Write(fromPeer mesh.PeerName, streamID uint16, opS
 	return nil
 }
 
-func (gdm *GossipDataManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, data []byte) error {
-	util.OverlayDebugPrintln("GossipDataManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
-	c := make(chan struct{})
-	gdm.Peer.Actions <- func() {
-		defer close(c)
-		if gdm.Peer.Send != nil {
-			//recvOpSide := ClientSide
-			sendObj := GossipPacket{
-				Buf:          data,
-				ReceiverSide: recvOpSide,
-				StreamID:     streamID,
-			}
-			encodedData := sendObj.Encode()[0]
-			for {
-				err := gdm.Peer.Send.GossipUnicast(dest, encodedData)
-				if err == nil {
-					break
-				} else {
-					// TODO: need to implement timeout
-					util.OverlayDebugPrintln("GossipDataManager.SendToRemote: err:", err)
-					util.OverlayDebugPrintln("GossipDataManager.SendToRemote: 1sec wait and do retry")
-					time.Sleep(1 * time.Second)
-				}
-			}
-		} else {
-			gdm.Peer.Logger.Printf("no sender configured; not broadcasting update right now")
-		}
-	}
-	<-c
-
-	return nil
-}
-
 // Encode serializes our complete GossipDataManager to a Slice of byte-slices.
 // see https://golang.org/pkg/encoding/gob/
 func (gdm *GossipDataManager) Encode() [][]byte {
@@ -225,12 +185,13 @@ func (gdm *GossipDataManager) Merge(other mesh.GossipData) (complete mesh.Gossip
 func (gdm *GossipDataManager) WriteToLocalBuffer(p *Peer, src mesh.PeerName, streamID uint16, opSide OperationSideAt, data []byte) error {
 	util.OverlayDebugPrintln("GossipDataManager.WriteToLocalBuffer called. src:", src, " streamID", streamID, " data:", data)
 	if opSide == ServerSide {
-		gdm.LastRecvPeer = src
-		// server side uses only one buffer
-		err := p.GossipDataMan.Write(math.MaxUint64, streamID, opSide, data)
-		if err != nil {
-			panic(err)
-		}
+		// TODO: need to implement (GossipDataManager::WriteToLocalBuffer)
+		//gdm.LastRecvPeer = src
+		//// server side uses only one buffer
+		//err := p.GossipDataMan.Write(math.MaxUint64, streamID, opSide, data)
+		//if err != nil {
+		//	panic(err)
+		//}
 	} else if opSide == ClientSide {
 		err := p.GossipDataMan.Write(src, streamID, opSide, data)
 		if err != nil {
@@ -239,13 +200,6 @@ func (gdm *GossipDataManager) WriteToLocalBuffer(p *Peer, src mesh.PeerName, str
 	} else {
 		panic("invalid opSide")
 	}
-
-	return nil
-}
-
-func (gdm *GossipDataManager) WhenClose(remotePeer mesh.PeerName, streamID uint16) error {
-	util.OverlayDebugPrintln("GossipDataManager.WhenClose called. remotePeer:", remotePeer, " streamID:", streamID)
-	gdm.RemoveBuffer(remotePeer, streamID)
 
 	return nil
 }

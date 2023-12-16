@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"io/ioutil"
@@ -14,6 +13,7 @@ import (
 // before calling mesh.Router.Start.
 type Peer struct {
 	GossipDataMan *GossipDataManager
+	GossipMM      *GossipMessageManager
 	Send          mesh.Gossip
 	Actions       chan<- func()
 	Quit          chan struct{}
@@ -36,8 +36,10 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, destname mesh.PeerName, nic
 	}
 
 	actions := make(chan func())
+	tmpDM := NewGossipDataManager(self)
 	p := &Peer{
-		GossipDataMan: NewGossipDataManager(self),
+		GossipDataMan: tmpDM,
+		GossipMM:      NewGossipMessageManager(&PeerAddress{self}, tmpDM),
 		Send:          nil, // must .Register() later
 		Actions:       actions,
 		Quit:          make(chan struct{}),
@@ -107,15 +109,5 @@ func (p *Peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.G
 // Merge the gossiped data represented by buf into our GossipDataManager.
 func (p *Peer) OnGossipUnicast(src mesh.PeerName, buf []byte) error {
 	util.OverlayDebugPrintln("OnGossipUnicast called")
-	gp, err := DecodeGossipPacket(buf)
-	if err != nil {
-		panic(err)
-	}
-
-	err2 := p.GossipDataMan.WriteToLocalBuffer(p, src, gp.StreamID, gp.ReceiverSide, gp.Buf)
-	if err2 != nil {
-		panic(err2)
-	}
-	util.OverlayDebugPrintln(fmt.Sprintf("OnGossipUnicast %s %v", src, buf))
-	return nil
+	return p.OnPacketReceived(src, buf)
 }
