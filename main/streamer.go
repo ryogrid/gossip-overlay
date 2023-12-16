@@ -165,7 +165,6 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 	} else if p.GossipDataMan.Self == 3 { // reader and writer
 		var pingSeqNum int
 		isErrOccured := false
-		cnt := 1
 		for {
 			//if pingSeqNum < 5 {
 			if !isErrOccured {
@@ -179,12 +178,6 @@ func clientRoutine(p *core.Peer, streamId uint16) {
 				}
 				fmt.Println("received:", buff[0], buff[1])
 			}
-
-			if cnt%10 == 0 {
-				// Inject packet loss
-				p.GossipDataMan.IsInjectPacketLoss = true
-			}
-			cnt++
 
 			//// test of close
 			//if pingSeqNum == 5 {

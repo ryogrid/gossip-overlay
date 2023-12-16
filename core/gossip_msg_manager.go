@@ -14,15 +14,39 @@ type GossipMessageManager struct {
 	// "<peer name>-<stream id" => channel to appropriate packet handling thread
 	PktHandlers    map[string]chan *GossipPacket
 	PktHandlersMtx sync.Mutex
+	Actions        chan<- func()
+	Quit           chan struct{}
 }
 
 func NewGossipMessageManager(localAddress *PeerAddress, gossipDM *GossipDataManager) *GossipMessageManager {
-	return &GossipMessageManager{
+	actions := make(chan func())
+	ret := &GossipMessageManager{
 		LocalAddress:   localAddress,
 		GossipDM:       gossipDM,
 		PktHandlers:    make(map[string]chan *GossipPacket),
 		PktHandlersMtx: sync.Mutex{},
+		Actions:        actions,
+		Quit:           make(chan struct{}),
 	}
+
+	go ret.loop(actions)
+
+	return ret
+}
+
+func (gmm *GossipMessageManager) loop(actions <-chan func()) {
+	for {
+		select {
+		case f := <-actions:
+			f()
+		case <-gmm.Quit:
+			return
+		}
+	}
+}
+
+func (gmm *GossipMessageManager) Stop() {
+	close(gmm.Quit)
 }
 
 func (gmm *GossipMessageManager) RegisterChToHandlerTh(chan *GossipPacket) {
@@ -31,14 +55,14 @@ func (gmm *GossipMessageManager) RegisterChToHandlerTh(chan *GossipPacket) {
 }
 
 func (gmm *GossipMessageManager) UnregisterChToHandlerTh(chan *GossipPacket) {
-	// TODO: need to implement (GossipMessageManager::RegisterChToHandlerTh)
+	// TODO: need to implement (GossipMessageManager::UnregisterChToHandlerTh)
 	panic("not implemented")
 }
 
 func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, data []byte) error {
 	util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
 	c := make(chan struct{})
-	gmm.GossipDM.Peer.Actions <- func() {
+	gmm.Actions <- func() {
 		defer close(c)
 		if gmm.GossipDM.Peer.Send != nil {
 			sendObj := GossipPacket{

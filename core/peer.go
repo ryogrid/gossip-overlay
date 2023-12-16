@@ -26,7 +26,7 @@ type Peer struct {
 var _ mesh.Gossiper = &Peer{}
 
 // Construct a Peer with empty GossipDataManager.
-// Be sure to Register a channel, later,
+// Be sure to RegisterGossipObj a channel, later,
 // so we can make outbound communication.
 func NewPeer(self mesh.PeerName, logger *log.Logger, destname mesh.PeerName, nickname *string, channel *string, meshListen *string, meshConf *mesh.Config, peers *util.Stringset) *Peer {
 	router, err := mesh.NewRouter(*meshConf, self, *nickname, mesh.NullOverlay{}, log.New(ioutil.Discard, "", 0))
@@ -40,7 +40,7 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, destname mesh.PeerName, nic
 	p := &Peer{
 		GossipDataMan: tmpDM,
 		GossipMM:      NewGossipMessageManager(&PeerAddress{self}, tmpDM),
-		Send:          nil, // must .Register() later
+		Send:          nil, // must .RegisterGossipObj() later
 		Actions:       actions,
 		Quit:          make(chan struct{}),
 		Logger:        logger,
@@ -56,7 +56,7 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, destname mesh.PeerName, nic
 		logger.Fatalf("Could not create gossip: %v", err)
 	}
 
-	p.Register(gossip)
+	p.RegisterGossipObj(gossip)
 
 	go func() {
 		logger.Printf("mesh router starting (%s)", *meshListen)
@@ -78,8 +78,8 @@ func (p *Peer) loop(actions <-chan func()) {
 	}
 }
 
-// Register the result of a mesh.Router.NewGossip.
-func (p *Peer) Register(send mesh.Gossip) {
+// RegisterGossipObj the result of a mesh.Router.NewGossip.
+func (p *Peer) RegisterGossipObj(send mesh.Gossip) {
 	p.Actions <- func() { p.Send = send }
 }
 
@@ -109,5 +109,5 @@ func (p *Peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.G
 // Merge the gossiped data represented by buf into our GossipDataManager.
 func (p *Peer) OnGossipUnicast(src mesh.PeerName, buf []byte) error {
 	util.OverlayDebugPrintln("OnGossipUnicast called")
-	return p.OnPacketReceived(src, buf)
+	return p.GossipMM.OnPacketReceived(src, buf)
 }

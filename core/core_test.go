@@ -6,7 +6,7 @@ import (
 )
 
 func TestSerializeDeserialize(t *testing.T) {
-	gp := GossipPacket{[]byte{1, 2, 3}, ClientSide, 1}
+	gp := GossipPacket{[]byte{1, 2, 3}, ClientSide, 1, 0, PACKET_KIND_DATA}
 	//gp := GossipPacket{[]byte{}, ClientSide}
 
 	buf := gp.Encode()

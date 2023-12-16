@@ -71,7 +71,7 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 		//for _, peerName := range peerNames {
 		//	oc.GossipDM.SendToRemote(peerName, oc.LocalSessionSide, b)
 		//}
-		oc.GossipDM.SendToRemote(oc.RemoteAddress.PeerName, oc.StreamID, oc.RemoteSessionSide, b)
+		oc.GossipDM.Peer.GossipMM.SendToRemote(oc.RemoteAddress.PeerName, oc.StreamID, oc.RemoteSessionSide, b)
 	} else if oc.LocalSessionSide == ServerSide {
 		// TODO: need to implement (GossipSession::Write)
 
