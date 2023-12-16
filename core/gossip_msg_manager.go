@@ -49,12 +49,12 @@ func (gmm *GossipMessageManager) Stop() {
 	close(gmm.Quit)
 }
 
-func (gmm *GossipMessageManager) RegisterChToHandlerTh(chan *GossipPacket) {
+func (gmm *GossipMessageManager) RegisterChToHandlerTh(dest mesh.PeerName, streamID uint16, recvPktCh chan *GossipPacket) {
 	// TODO: need to implement (GossipMessageManager::RegisterChToHandlerTh)
 	panic("not implemented")
 }
 
-func (gmm *GossipMessageManager) UnregisterChToHandlerTh(chan *GossipPacket) {
+func (gmm *GossipMessageManager) UnregisterChToHandlerTh(dest mesh.PeerName, streamID uint16, recvPktCh chan *GossipPacket) {
 	// TODO: need to implement (GossipMessageManager::UnregisterChToHandlerTh)
 	panic("not implemented")
 }
@@ -92,6 +92,36 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 	return nil
 }
 
+// use at notification of information for CtoC stream establishment (4way handshake)
+// and at doing heartbeat (maybe)
+func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, data []byte) error {
+	util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
+	// TODO: need to implement (GossipMessageManager::SendPingAndWaitPong)
+	//       use gmm.SendToRemote method
+
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		var recvPktCh chan *GossipPacket
+		if gmm.GossipDM.Peer.Send != nil {
+			recvPktCh = make(chan *GossipPacket)
+			gmm.RegisterChToHandlerTh(dest, streamID, recvPktCh)
+			gmm.SendToRemote(dest, streamID, recvOpSide, data)
+		} else {
+			panic("no sender configured; not broadcasting update right now")
+		}
+
+		pkt := <-recvPktCh
+		// TODO: need to check received pkt content is appropriate (GossipMessageManager::SendPingAndWaitPong)
+		fmt.Println(pkt)
+		panic("not implemented")
+	}()
+	<-c
+
+	panic("not implemented")
+}
+
+// called when any packet received (even if packat is of SCTP CtoC stream)
 func (gmm *GossipMessageManager) OnPacketReceived(src mesh.PeerName, buf []byte) error {
 	gp, err := DecodeGossipPacket(buf)
 	if err != nil {
@@ -99,6 +129,7 @@ func (gmm *GossipMessageManager) OnPacketReceived(src mesh.PeerName, buf []byte)
 	}
 
 	// TODO: need to handle packets according to its kind (Peer::OnPacketReceived)
+	//       in detail, need to pass packet to appropriate handler thread through these channel
 
 	err2 := gmm.GossipDM.Peer.GossipDataMan.WriteToLocalBuffer(gmm.GossipDM.Peer, src, gp.StreamID, gp.ReceiverSide, gp.Buf)
 	if err2 != nil {
