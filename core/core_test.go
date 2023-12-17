@@ -2,11 +2,12 @@ package core
 
 import (
 	"fmt"
+	"github.com/weaveworks/mesh"
 	"testing"
 )
 
 func TestSerializeDeserialize(t *testing.T) {
-	gp := GossipPacket{[]byte{1, 2, 3}, ClientSide, 1, 0, PACKET_KIND_DATA}
+	gp := GossipPacket{mesh.PeerName(0), []byte{1, 2, 3}, ClientSide, 1, 0, PACKET_KIND_CTC_DATA}
 	//gp := GossipPacket{[]byte{}, ClientSide}
 
 	buf := gp.Encode()

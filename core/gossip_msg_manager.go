@@ -11,22 +11,25 @@ import (
 type GossipMessageManager struct {
 	LocalAddress *PeerAddress
 	GossipDM     *GossipDataManager
-	// "<peer name>-<stream id" => channel to appropriate packet handling thread
+	//// "<peer name>-<stream id" => channel to appropriate packet handling thread
 	PktHandlers    map[string]chan *GossipPacket
 	PktHandlersMtx sync.Mutex
 	Actions        chan<- func()
 	Quit           chan struct{}
+	// first notify packet from client is sent to this channel
+	NotifyPktChForServerSide chan *GossipPacket
 }
 
 func NewGossipMessageManager(localAddress *PeerAddress, gossipDM *GossipDataManager) *GossipMessageManager {
 	actions := make(chan func())
 	ret := &GossipMessageManager{
-		LocalAddress:   localAddress,
-		GossipDM:       gossipDM,
-		PktHandlers:    make(map[string]chan *GossipPacket),
-		PktHandlersMtx: sync.Mutex{},
-		Actions:        actions,
-		Quit:           make(chan struct{}),
+		LocalAddress:             localAddress,
+		GossipDM:                 gossipDM,
+		PktHandlers:              make(map[string]chan *GossipPacket),
+		PktHandlersMtx:           sync.Mutex{},
+		Actions:                  actions,
+		Quit:                     make(chan struct{}),
+		NotifyPktChForServerSide: nil,
 	}
 
 	go ret.loop(actions)
@@ -66,6 +69,7 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 		defer close(c)
 		if gmm.GossipDM.Peer.Send != nil {
 			sendObj := GossipPacket{
+				FromPeer:     gmm.LocalAddress.PeerName,
 				Buf:          data,
 				ReceiverSide: recvOpSide,
 				StreamID:     streamID,
@@ -96,8 +100,7 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 // and at doing heartbeat (maybe)
 func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, data []byte) error {
 	util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
-	// TODO: need to implement (GossipMessageManager::SendPingAndWaitPong)
-	//       use gmm.SendToRemote method
+	// TODO: need to implement timeout (GossipMessageManager::SendPingAndWaitPong)
 
 	c := make(chan struct{})
 	go func() {
@@ -128,9 +131,21 @@ func (gmm *GossipMessageManager) OnPacketReceived(src mesh.PeerName, buf []byte)
 		panic(err)
 	}
 
-	// TODO: need to handle packets according to its kind (Peer::OnPacketReceived)
-	//       in detail, need to pass packet to appropriate handler thread through these channel
+	if gp.PktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.ReceiverSide == ServerSide {
+		gmm.NotifyPktChForServerSide <- gp
+		return nil
+	} else if gp.PktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.ReceiverSide == ClientSide {
+		gmm.PktHandlersMtx.Lock()
+		destCh := gmm.PktHandlers[gp.FromPeer.String()+"-"+string(gp.StreamID)]
+		gmm.PktHandlersMtx.Unlock()
+		if destCh != nil {
+			destCh <- gp
+		} else {
+			panic("illigal internal state!")
+		}
+	}
 
+	// when packat is of CtoC stream
 	err2 := gmm.GossipDM.Peer.GossipDataMan.WriteToLocalBuffer(gmm.GossipDM.Peer, src, gp.StreamID, gp.ReceiverSide, gp.Buf)
 	if err2 != nil {
 		panic(err2)

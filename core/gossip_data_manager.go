@@ -185,7 +185,7 @@ func (gdm *GossipDataManager) Merge(other mesh.GossipData) (complete mesh.Gossip
 func (gdm *GossipDataManager) WriteToLocalBuffer(p *Peer, src mesh.PeerName, streamID uint16, opSide OperationSideAt, data []byte) error {
 	util.OverlayDebugPrintln("GossipDataManager.WriteToLocalBuffer called. src:", src, " streamID", streamID, " data:", data)
 	if opSide == ServerSide {
-		// TODO: need to implement (GossipDataManager::WriteToLocalBuffer)
+		// TODO: need to implement when ServerSide (GossipDataManager::WriteToLocalBuffer)
 		//gdm.LastRecvPeer = src
 		//// server side uses only one buffer
 		//err := p.GossipDataMan.Write(math.MaxUint64, streamID, opSide, data)

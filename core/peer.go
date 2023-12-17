@@ -7,7 +7,7 @@ import (
 	"log"
 )
 
-// Peer encapsulates GossipDataManager and implements mesh.Gossiper.
+// Peer encapsulates GossipDataManager, GossipMessageManager and implements mesh.Gossiper.
 // It should be passed to mesh.Router.NewGossip,
 // and the resulting Gossip registered in turn,
 // before calling mesh.Router.Start.
