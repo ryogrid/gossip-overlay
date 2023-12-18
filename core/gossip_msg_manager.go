@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
+	"math"
 	"sync"
 	"time"
 )
@@ -69,12 +70,17 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 	gmm.Actions <- func() {
 		defer close(c)
 		if gmm.GossipDM.Peer.Send != nil {
+			pktKind := PACKET_KIND_NOTIFY_PEER_INFO
+			if seqNum == math.MaxUint64 {
+				pktKind = PACKET_KIND_CTC_DATA
+			}
 			sendObj := GossipPacket{
 				FromPeer:     gmm.LocalAddress.PeerName,
 				Buf:          data,
 				ReceiverSide: recvOpSide,
 				StreamID:     streamID,
-				// TODO: need to set proper value of GossipPacket(GossipMessageManager::SendToRemote)
+				SeqNum:       seqNum,
+				PktKind:      pktKind,
 			}
 			encodedData := sendObj.Encode()[0]
 			for {
@@ -119,7 +125,6 @@ func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamI
 			recvPktCh = make(chan *GossipPacket)
 			gmm.RegisterChToHandlerTh(dest, streamID, recvPktCh)
 			gmm.SendToRemote(dest, streamID, recvOpSide, seqNum, data)
-			// TODO: need to implement timeout (GossipMessageManager::SendPingAndWaitPong)
 		} else {
 			panic("no sender configured; not broadcasting update right now")
 		}
@@ -164,7 +169,7 @@ func (gmm *GossipMessageManager) OnPacketReceived(src mesh.PeerName, buf []byte)
 	}
 
 	// when packat is of CtoC stream
-	err2 := gmm.GossipDM.Peer.GossipDataMan.WriteToLocalBuffer(gmm.GossipDM.Peer, src, gp.StreamID, gp.ReceiverSide, gp.Buf)
+	err2 := gmm.GossipDM.Write(gp.FromPeer, gp.StreamID, gp.Buf)
 	if err2 != nil {
 		panic(err2)
 	}

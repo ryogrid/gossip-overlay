@@ -137,7 +137,7 @@ func clientRoutine(p *core.Peer) {
 		panic(err)
 	}
 
-	channel, streamID, err2 := oc.OpenChannel()
+	channel, streamID, err2 := oc.OpenChannel(math.MaxUint16)
 	if err2 != nil {
 		panic(err2)
 	}

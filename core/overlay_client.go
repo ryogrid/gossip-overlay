@@ -9,6 +9,7 @@ import (
 	"github.com/pion/sctp"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -111,8 +112,14 @@ retry:
 	}
 }
 
-func (oc *OverlayClient) OpenChannel() (*datachannel.DataChannel, uint16, error) {
-	streamId := genRandomStreamId()
+func (oc *OverlayClient) OpenChannel(streamId uint16) (*datachannel.DataChannel, uint16, error) {
+	streamId_ := uint16(0)
+	if streamId != math.MaxUint16 {
+		streamId_ = streamId
+	} else {
+		streamId_ = genRandomStreamId()
+	}
+
 	oc.NotifyOpenChReqToServer(streamId)
 
 	overlayStream, err := oc.establishCtoCStream(streamId)
@@ -124,7 +131,7 @@ func (oc *OverlayClient) OpenChannel() (*datachannel.DataChannel, uint16, error)
 
 	util.OverlayDebugPrintln("end of OverlayClient::OpenChannel")
 
-	return overlayStream, streamId, nil
+	return overlayStream, streamId_, nil
 }
 
 func (oc *OverlayClient) Destroy() error {

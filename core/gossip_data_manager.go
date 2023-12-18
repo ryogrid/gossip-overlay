@@ -51,29 +51,24 @@ func NewGossipDataManager(selfname mesh.PeerName) *GossipDataManager {
 		Peer: nil,
 	}
 	// initialize shared buffer for server side (not used on client side)
-	ret.Write(math.MaxUint64, 0, ServerSide, []byte{})
+	ret.Write(math.MaxUint64, 0, []byte{})
 	return ret
 }
 
-func (gdm *GossipDataManager) LoadBuffer(fromPeer mesh.PeerName, streamID uint16, opSide OperationSideAt) (retBuf *BufferWithMutex, ok bool) {
+func (gdm *GossipDataManager) LoadBuffer(fromPeer mesh.PeerName, streamID uint16) (retBuf *BufferWithMutex, ok bool) {
 	loadPeer := fromPeer
-	if opSide == ServerSide {
-		loadPeer = math.MaxUint64
-	}
 
 	val, ok_ := gdm.bufs.Load(loadPeer.String() + "-" + fmt.Sprintf("%v", streamID))
 	if !ok_ {
-		util.OverlayDebugPrintln("GossipDataManager::LoadBuffer: no such buffer fromPeer:", fromPeer, " streamID:", streamID, " opSide:", opSide)
+		util.OverlayDebugPrintln("GossipDataManager::LoadBuffer: no such buffer fromPeer:", fromPeer, " streamID:", streamID)
 		return nil, false
 	}
 	return val.(*BufferWithMutex), true
 }
 
-func (gdm *GossipDataManager) StoreBuffer(fromPeer mesh.PeerName, streamID uint16, opSide OperationSideAt, buf *BufferWithMutex) {
+func (gdm *GossipDataManager) StoreBuffer(fromPeer mesh.PeerName, streamID uint16, buf *BufferWithMutex) {
 	storePeer := fromPeer
-	if opSide == ServerSide {
-		storePeer = math.MaxUint64
-	}
+
 	gdm.bufs.Store(storePeer.String()+"-"+fmt.Sprintf("%v", streamID), buf)
 }
 
@@ -81,14 +76,14 @@ func (gdm *GossipDataManager) RemoveBuffer(peerName mesh.PeerName, streamID uint
 	gdm.bufs.Delete(peerName.String() + "-" + fmt.Sprintf("%v", streamID))
 }
 
-func (gdm *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16, opSide OperationSideAt) (result []byte) {
-	util.OverlayDebugPrintln("GossipDataManager.Read called: start. fromPeer:", fromPeer, " streamID:", streamID, " opSide:", opSide)
+func (gdm *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16) (result []byte) {
+	util.OverlayDebugPrintln("GossipDataManager.Read called: start. fromPeer:", fromPeer, " streamID:", streamID)
 
 	var copiedBuf = make([]byte, 0)
-	val, ok2 := gdm.LoadBuffer(fromPeer, streamID, opSide)
+	val, ok2 := gdm.LoadBuffer(fromPeer, streamID)
 	if !ok2 {
 		//panic("no such StreamToNotifySelfInfo")
-		util.OverlayDebugPrintln("GossipDataManager::Read: no such buffer. fromPeer:", fromPeer, " streamID:", streamID, " opSide:", opSide)
+		util.OverlayDebugPrintln("GossipDataManager::Read: no such buffer. fromPeer:", fromPeer, " streamID:", streamID)
 		return nil
 		//return make([]byte, 0)
 	}
@@ -131,23 +126,23 @@ func (gdm *GossipDataManager) Read(fromPeer mesh.PeerName, streamID uint16, opSi
 	return copiedBuf
 }
 
-func (gdm *GossipDataManager) Write(fromPeer mesh.PeerName, streamID uint16, opSide OperationSideAt, data []byte) error {
+func (gdm *GossipDataManager) Write(fromPeer mesh.PeerName, streamID uint16, data []byte) error {
 	util.OverlayDebugPrintln("GossipDataManager.Write called. fromPeer:", fromPeer, " streamID", streamID, " data:", data)
 
 	var stBuf []byte
 	var stBufMtx *sync.Mutex
 	var bufWithMtx *BufferWithMutex
-	if val, ok := gdm.LoadBuffer(fromPeer, streamID, opSide); ok {
+	if val, ok := gdm.LoadBuffer(fromPeer, streamID); ok {
 		bufWithMtx = val
 		stBufMtx = val.Mtx
 		stBufMtx.Lock()
 		stBuf = val.Buf
 	} else {
-		util.OverlayDebugPrintln("GossipDataManager::Write: no such buffer but create. fromPeer:", fromPeer, " streamID:", streamID, " opSide:", opSide)
+		util.OverlayDebugPrintln("GossipDataManager::Write: no such buffer but create. fromPeer:", fromPeer, " streamID:", streamID)
 		stBuf = make([]byte, 0)
 		//st.bufs.Store(fromPeer, stBuf)
 		bufWithMtx = NewBufferWithMutex(stBuf)
-		gdm.StoreBuffer(fromPeer, streamID, opSide, bufWithMtx)
+		gdm.StoreBuffer(fromPeer, streamID, bufWithMtx)
 		stBufMtx = bufWithMtx.Mtx
 		stBufMtx.Lock()
 		//return errors.New("no such buffer")
@@ -159,7 +154,7 @@ func (gdm *GossipDataManager) Write(fromPeer mesh.PeerName, streamID uint16, opS
 	tmpBuf = append(tmpBuf, data...)
 	retBuf = append(retBuf, tmpBuf...)
 	bufWithMtx.Buf = tmpBuf
-	gdm.StoreBuffer(fromPeer, streamID, opSide, bufWithMtx)
+	gdm.StoreBuffer(fromPeer, streamID, bufWithMtx)
 	stBufMtx.Unlock()
 
 	return nil
@@ -182,47 +177,6 @@ func (gdm *GossipDataManager) Merge(other mesh.GossipData) (complete mesh.Gossip
 	return other
 }
 
-func (gdm *GossipDataManager) WriteToLocalBuffer(p *Peer, src mesh.PeerName, streamID uint16, opSide OperationSideAt, data []byte) error {
-	util.OverlayDebugPrintln("GossipDataManager.WriteToLocalBuffer called. src:", src, " streamID", streamID, " data:", data)
-	if opSide == ServerSide {
-		// TODO: need to implement when ServerSide (GossipDataManager::WriteToLocalBuffer)
-		//gdm.LastRecvPeer = src
-		//// server side uses only one buffer
-		//err := p.GossipDataMan.Write(math.MaxUint64, streamID, opSide, data)
-		//if err != nil {
-		//	panic(err)
-		//}
-	} else if opSide == ClientSide {
-		err := p.GossipDataMan.Write(src, streamID, opSide, data)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		panic("invalid opSide")
-	}
-
-	return nil
-}
-
-func (gdm *GossipDataManager) NewGossipSessionForClientToServer(remotePeer mesh.PeerName) (*GossipSession, error) {
-	ret := &GossipSession{
-		LocalAddress: &PeerAddress{gdm.Self},
-		//RemoteAddress:      []*PeerAddress{&PeerAddress{remotePeer}},
-		RemoteAddress: &PeerAddress{remotePeer},
-		//RemoteAddressesMtx: &sync.Mutex{},
-		//SessMtx:            sync.RWMutex{},
-		GossipDM:          gdm,
-		LocalSessionSide:  ClientSide,
-		RemoteSessionSide: ServerSide,
-		StreamID:          0,
-	}
-	if _, ok := gdm.LoadBuffer(remotePeer, 0, ClientSide); !ok {
-		gdm.StoreBuffer(remotePeer, 0, ClientSide, NewBufferWithMutex(make([]byte, 0)))
-	}
-
-	return ret, nil
-}
-
 func (gdm *GossipDataManager) NewGossipSessionForClientToClient(remotePeer mesh.PeerName, streamID uint16) (*GossipSession, error) {
 	ret := &GossipSession{
 		LocalAddress: &PeerAddress{gdm.Self},
@@ -235,21 +189,8 @@ func (gdm *GossipDataManager) NewGossipSessionForClientToClient(remotePeer mesh.
 		RemoteSessionSide: ClientSide,
 		StreamID:          streamID,
 	}
-	if _, ok := gdm.LoadBuffer(remotePeer, streamID, ClientSide); !ok {
-		gdm.StoreBuffer(remotePeer, streamID, ClientSide, NewBufferWithMutex(make([]byte, 0)))
-	}
-
-	return ret, nil
-}
-
-func (gdm *GossipDataManager) NewGossipSessionForServer() (*GossipSession, error) {
-	ret := &GossipSession{
-		LocalAddress:      &PeerAddress{gdm.Self},
-		RemoteAddress:     &PeerAddress{math.MaxUint64},
-		GossipDM:          gdm,
-		LocalSessionSide:  ServerSide,
-		RemoteSessionSide: ClientSide,
-		StreamID:          0,
+	if _, ok := gdm.LoadBuffer(remotePeer, streamID); !ok {
+		gdm.StoreBuffer(remotePeer, streamID, NewBufferWithMutex(make([]byte, 0)))
 	}
 
 	return ret, nil

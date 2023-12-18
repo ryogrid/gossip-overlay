@@ -143,9 +143,17 @@ func (ols *OverlayServer) InitClientInfoNotifyPktRootHandlerTh() error {
 func (ols *OverlayServer) Accept() (*datachannel.DataChannel, mesh.PeerName, uint16, error) {
 	clientInfo := <-ols.Info4OLChannelRecvCh
 	fmt.Println(clientInfo)
-	// TODO: need to implement (OverlayServer::Accept)
-	//       - establish CtoC data channel
-	panic("not implemented")
+	olc, err := NewOverlayClient(ols.P, clientInfo.RemotePeerName, ols.GossipMM)
+	if err != nil {
+		panic(err)
+	}
+
+	dc, _, err2 := olc.OpenChannel(clientInfo.StreamID)
+	if err2 != nil {
+		panic(err2)
+	}
+
+	return dc, clientInfo.RemotePeerName, clientInfo.StreamID, nil
 }
 
 func (ols *OverlayServer) Close() error {

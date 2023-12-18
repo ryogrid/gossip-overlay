@@ -28,16 +28,10 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	util.OverlayDebugPrintln("GossipSession.Read called")
 
 	var buf []byte
-	if oc.LocalSessionSide == ServerSide {
-		buf = oc.GossipDM.Read(math.MaxUint64, 0, ServerSide)
-	} else if oc.LocalSessionSide == ClientSide {
-		peerName := oc.RemoteAddress.PeerName
-		buf = oc.GossipDM.Read(peerName, oc.StreamID, ClientSide)
-		if buf == nil {
-			return 0, errors.New("session closed")
-		}
-	} else {
-		panic("invalid LocalSessionSide")
+	peerName := oc.RemoteAddress.PeerName
+	buf = oc.GossipDM.Read(peerName, oc.StreamID)
+	if buf == nil {
+		return 0, errors.New("session closed")
 	}
 	copy(b, buf)
 
@@ -48,38 +42,7 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 func (oc *GossipSession) Write(b []byte) (n int, err error) {
 	util.OverlayDebugPrintln("GossipSession.Write called", b)
 
-	//if len(oc.RemoteAddress) > 0 {
-	if oc.LocalSessionSide == ClientSide {
-		//peerNames := make([]mesh.PeerName, 0)
-		//oc.RemoteAddressesMtx.Lock()
-		//for _, remoteAddr := range oc.RemoteAddress {
-		//	peerNames = append(peerNames, remoteAddr.PeerName)
-		//}
-		//oc.RemoteAddressesMtx.Unlock()
-		//
-		//// when client side, length of peerNames is 1, so send data to only one stream
-		//// but when server side, length of peerNames is same as number of established streams
-		//// server side sends same data to all streams (it is ridiculous...)
-		//// because collect destination decidable design can't be implemented with mesh lib
-		//// stream collectly must work even if send data to not collect destination
-		//// by control of SCTP protocol layer...
-		//for _, peerName := range peerNames {
-		//	oc.GossipDM.SendToRemote(peerName, oc.LocalSessionSide, b)
-		//}
-		oc.GossipDM.Peer.GossipMM.SendToRemote(oc.RemoteAddress.PeerName, oc.StreamID, oc.RemoteSessionSide, math.MaxUint64, b)
-	} else if oc.LocalSessionSide == ServerSide {
-		// TODO: need to implement (GossipSession::Write)
-
-		//// server side uses LastRecvPeer until StreamToNotifySelfInfo is established
-		//// because remote peer name can't be known until then
-		//for oc.GossipDM.LastRecvPeer == math.MaxUint64 {
-		//	time.Sleep(100 * time.Millisecond)
-		//}
-		////oc.GossipDM.SendToRemote(oc.GossipDM.LastRecvPeer, oc.LocalSessionSide, b)
-		//oc.GossipDM.SendToRemote(oc.GossipDM.LastRecvPeer, oc.StreamID, oc.RemoteSessionSide, b)
-	} else {
-		panic("invalid LocalSessionSide")
-	}
+	oc.GossipDM.Peer.GossipMM.SendToRemote(oc.RemoteAddress.PeerName, oc.StreamID, oc.RemoteSessionSide, math.MaxUint64, b)
 
 	return len(b), nil
 }
@@ -101,11 +64,6 @@ func (oc *GossipSession) LocalAddr() net.Addr {
 
 func (oc *GossipSession) RemoteAddr() net.Addr {
 	util.OverlayDebugPrintln("GossipSession.RemoteAddr called")
-	//oc.RemoteAddressesMtx.Lock()
-	//defer oc.RemoteAddressesMtx.Unlock()
-	//if len(oc.RemoteAddress) > 0 {
-	//	return oc.RemoteAddress[0]
-	//}
 	if oc.RemoteAddress.PeerName != math.MaxUint64 {
 		return oc.RemoteAddress
 	}
