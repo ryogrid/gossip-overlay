@@ -16,7 +16,7 @@ type GossipMessageManager struct {
 	PktHandlersMtx sync.Mutex
 	Actions        chan<- func()
 	Quit           chan struct{}
-	// first notify packet from client is sent to this channel
+	// notification packet from client is sent to this channel
 	NotifyPktChForServerSide chan *GossipPacket
 }
 
@@ -100,7 +100,6 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 // and at doing heartbeat (maybe)
 func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, data []byte) error {
 	util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
-	// TODO: need to implement timeout (GossipMessageManager::SendPingAndWaitPong)
 
 	c := make(chan struct{})
 	go func() {
@@ -110,18 +109,15 @@ func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamI
 			recvPktCh = make(chan *GossipPacket)
 			gmm.RegisterChToHandlerTh(dest, streamID, recvPktCh)
 			gmm.SendToRemote(dest, streamID, recvOpSide, data)
+			// TODO: need to implement timeout (GossipMessageManager::SendPingAndWaitPong)
 		} else {
 			panic("no sender configured; not broadcasting update right now")
 		}
 
-		pkt := <-recvPktCh
-		// TODO: need to check received pkt content is appropriate (GossipMessageManager::SendPingAndWaitPong)
-		fmt.Println(pkt)
-		panic("not implemented")
+		_ = <-recvPktCh
 	}()
 	<-c
-
-	panic("not implemented")
+	return nil
 }
 
 // called when any packet received (even if packat is of SCTP CtoC stream)
@@ -140,6 +136,7 @@ func (gmm *GossipMessageManager) OnPacketReceived(src mesh.PeerName, buf []byte)
 		gmm.PktHandlersMtx.Unlock()
 		if destCh != nil {
 			destCh <- gp
+			return nil
 		} else {
 			panic("illigal internal state!")
 		}

@@ -17,8 +17,6 @@ type ClientInfo struct {
 // wrapper of sctp.Server
 type OverlayServer struct {
 	P                    *Peer
-	CtoCChannels         []*datachannel.DataChannel
-	ChannelsMtx          *sync.Mutex
 	Info4OLChannelRecvCh chan *ClientInfo
 	GossipMM             *GossipMessageManager
 }
@@ -26,8 +24,6 @@ type OverlayServer struct {
 func NewOverlayServer(p *Peer, gossipMM *GossipMessageManager) (*OverlayServer, error) {
 	ret := &OverlayServer{
 		P:                    p,
-		CtoCChannels:         make([]*datachannel.DataChannel, 0),
-		ChannelsMtx:          &sync.Mutex{},
 		Info4OLChannelRecvCh: nil,
 		GossipMM:             gossipMM,
 	}
@@ -50,18 +46,26 @@ func decodeUint16FromBytes(buf []byte) uint16 {
 	return ret
 }
 
+func (ols *OverlayServer) sendPongPktToClient(remotePeer mesh.PeerName, streamID uint16) error {
+	err := ols.GossipMM.SendToRemote(remotePeer, streamID, ClientSide, []byte{})
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+}
+
 // thread for handling client info notify packet of each client
 func (ols *OverlayServer) newHandshakeHandlingThServSide(remotePeer mesh.PeerName, streamID uint16,
 	recvPktCh chan *GossipPacket, finNotifyCh chan *ClientInfo) {
 	// TODO: need to initialization
 
-	for {
-		pkt := <-recvPktCh
-		fmt.Println(pkt)
-		// TODO: need to implement (OverlayServer::newHandshakeHandlingTh)
-		//       - recv ping and send pong packet twice
-		//       - when ping-pong x2 is finished, send client info to ols.Info4OLChannelRecvCh channel
-	}
+	// TODO: need to implement (OverlayServer::newHandshakeHandlingTh)
+	//       - recv ping and send pong packet twice
+	//       - when ping-pong x2 is finished, send client info to ols.Info4OLChannelRecvCh channel
+	pkt := <-recvPktCh
+	// checking of first packet is not needed
+	fmt.Println(pkt)
+
 	finNotifyCh <- &ClientInfo{remotePeer, streamID}
 }
 
@@ -99,14 +103,6 @@ func (ols *OverlayServer) InitClientInfoNotifyPktRootHandlerTh() error {
 	go ols.ClientInfoNotifyPktRootHandlerTh()
 
 	return nil
-}
-
-func (ols *OverlayServer) GetInfoForCtoCStream() (remotePeer mesh.PeerName, streamID uint16, err error) {
-	// TODO: need to implement (OverlayServer::GetInfoForCtoCStream)
-	//       - wait handshake finished client info using channel
-
-	panic("not implemented")
-	//return remotePeerName, decodedStreamID, nil
 }
 
 func (ols *OverlayServer) Accept() (*datachannel.DataChannel, mesh.PeerName, uint16, error) {

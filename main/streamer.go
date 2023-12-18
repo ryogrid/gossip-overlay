@@ -18,8 +18,8 @@ import (
 )
 
 /*
-.\streamer.exe -side send -hwaddr 00:00:00:00:00:02 -nickname b -mesh :6002 -destname 3 -streamid 1 -debug false | Tee-Object -FilePath ".\send2-104.txt"
-.\streamer.exe -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -destname 2 -streamid 1 -peer 127.0.0.1:6002 -debug false | Tee-Object -FilePath ".\send3-104.txt"
+.\streamer.exe -side recv -hwaddr 00:00:00:00:00:02 -nickname b -mesh :6002 -debug false | Tee-Object -FilePath ".\send2-104.txt"
+.\streamer.exe -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -destname 2 -peer 127.0.0.1:6002 -debug false | Tee-Object -FilePath ".\send3-104.txt"
 */
 func main() {
 	peers := &util.Stringset{}
@@ -30,7 +30,6 @@ func main() {
 		nickname   = flag.String("nickname", util.MustHostname(), "Peer nickname")
 		channel    = flag.String("channel", "default", "gossip channel name")
 		destname   = flag.String("destname", "", "destination Peer name (optional)")
-		streamID   = flag.String("streamid", "", "stream ID (optional)")
 		debug      = flag.String("debug", "false", "print debug info, true of false (optional)")
 	)
 	flag.Var(peers, "peer", "initial Peer (may be repeated)")
@@ -90,12 +89,9 @@ func main() {
 	}()
 
 	if *side == "send" {
-		convedStreamID, err2 := strconv.ParseUint(*streamID, 10, 16)
-		if err2 != nil {
-			panic(err2)
-		}
-		fmt.Println("convedStreamID:", convedStreamID)
-		go clientRoutine(p, uint16(convedStreamID))
+		go clientRoutine(p)
+	} else if *side == "recv" {
+		go serverRoutine(p)
 	} else {
 		panic("invalid side")
 	}
@@ -103,130 +99,66 @@ func main() {
 	logger.Print(<-errs)
 }
 
-func clientRoutine(p *core.Peer, streamId uint16) {
-	util.OverlayDebugPrintln("start clientRoutine")
-	a, err := core.NewOverlayClient(p, p.Destname)
+func serverRoutine(p *core.Peer) {
+	util.OverlayDebugPrintln("start serverRoutine")
+	oserv, err := core.NewOverlayServer(p, core.NewGossipMessageManager(&core.PeerAddress{p.GossipDataMan.Self}, p.GossipDataMan))
 	if err != nil {
 		panic(err)
 	}
 
-	//stream1, stream2, a2_2, err2 := a.OpenStream(streamId)
-	stream1, stream2, _, err2 := a.OpenStream(streamId)
-
+	channel, remotePeerName, streamID, err2 := oserv.Accept()
 	if err2 != nil {
 		panic(err2)
 	}
+	fmt.Println("accepted:", remotePeerName, streamID)
 
-	recvedByte := byte(0)
-
-	// TODO: temporal impl
-	if p.GossipDataMan.Self == 1 { //  reader
-		for {
-			buff := make([]byte, 1024)
-			_, _, err = stream1.ReadDataChannel(buff)
-			if err != nil {
-				//log.Panic(err)
-				panic(err)
-			}
-			fmt.Println("received:", buff[0], buff[1])
+	pongSeqNum := 0
+	for {
+		buff := make([]byte, 1024)
+		n1, _, err3 := channel.ReadDataChannel(buff)
+		if err3 != nil || n1 != 1 {
+			panic(err)
 		}
-	} else if p.GossipDataMan.Self == 2 { // writer and reader
-		var pingSeqNum int
-		for {
-			//_, err = stream.WriteSCTP([]byte{byte(pingSeqNum % 255), recvedByte}, sctp.PayloadTypeWebRTCBinary)
-			//if pingSeqNum < 5 {
-			_, err = stream2.WriteDataChannel([]byte{byte(pingSeqNum % 255), recvedByte}, false)
-			if err != nil {
-				//log.Panic(err)
-				panic(err)
-			}
-			fmt.Println("sent:", pingSeqNum%255, recvedByte)
-			pingSeqNum++
-			//}
+		fmt.Println("received:", buff[0])
 
-			//// test of close
-			//if pingSeqNum == 5 {
-			//	//stream1.Close()
-			//	stream2.Close()
-			//	ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
-			//	a2_2.Shutdown(ctx)
-			//	//panic("Shutdown finished")
-			//}
-
-			buff := make([]byte, 1024)
-			_, _, err = stream1.ReadDataChannel(buff)
-			if err != nil {
-				//log.Panic(err)
-				panic(err)
-			}
-			fmt.Println("received:", buff[0], buff[1])
-
+		n2, err4 := channel.WriteDataChannel([]byte{byte(pongSeqNum % 255), buff[0]}, false)
+		if err4 != nil || n2 != 2 {
+			panic(err4)
 		}
-	} else if p.GossipDataMan.Self == 3 { // reader and writer
-		var pingSeqNum int
-		isErrOccured := false
-		for {
-			//if pingSeqNum < 5 {
-			if !isErrOccured {
-				buff := make([]byte, 1024)
-				_, _, err = stream2.ReadDataChannel(buff)
-				if err != nil {
-					//log.Panic(err)
-					fmt.Println("err:", err)
-					isErrOccured = true
-					continue
-				}
-				fmt.Println("received:", buff[0], buff[1])
-			}
+		fmt.Println("sent:", pongSeqNum%255, buff[0])
+		pongSeqNum++
+	}
+}
 
-			//// test of close
-			//if pingSeqNum == 5 {
-			//	//stream1.Close()
-			//	stream2.Close()
-			//	//ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
-			//	//a2_2.Shutdown(ctx)
-			//	//panic("Shutdown finished")
-			//}
-
-			//_, err = stream.WriteSCTP([]byte{byte(pingSeqNum % 255), recvedByte}, sctp.PayloadTypeWebRTCBinary)
-			n, err := stream1.WriteDataChannel([]byte{byte(pingSeqNum % 255), recvedByte}, false)
-			if err != nil || n != 2 {
-				//log.Panic(err)
-				panic(err)
-			}
-			fmt.Println("sent:", pingSeqNum%255, recvedByte)
-			pingSeqNum++
-
-			time.Sleep(3 * time.Second)
-		}
-	} else {
-		panic("invalid destname")
+func clientRoutine(p *core.Peer) {
+	util.OverlayDebugPrintln("start serverRoutine")
+	oc, err := core.NewOverlayClient(p, p.Destname, core.NewGossipMessageManager(&core.PeerAddress{p.GossipDataMan.Self}, p.GossipDataMan))
+	if err != nil {
+		panic(err)
 	}
 
-	//go func() {
-	//	var pingSeqNum int
-	//	for {
-	//		_, err = stream.WriteSCTP([]byte{byte(pingSeqNum % 255), recvedByte}, sctp.PayloadTypeWebRTCBinary)
-	//		if err != nil {
-	//			//log.Panic(err)
-	//			panic(err)
-	//		}
-	//
-	//		fmt.Println("sent:", pingSeqNum%255, recvedByte)
-	//
-	//		pingSeqNum++
-	//
-	//		time.Sleep(3 * time.Second)
-	//	}
-	//}()
-	//
-	//for {
-	//	buff := make([]byte, 1024)
-	//	_, _, err = stream.ReadSCTP(buff)
-	//	if err != nil {
-	//		//log.Panic(err)
-	//		panic(err)
-	//	}
-	//	fmt.Println("received:", buff[0], buff[1])
-	//}
+	channel, streamID, err2 := oc.OpenChannel()
+	if err2 != nil {
+		panic(err2)
+	}
+	fmt.Println("opened:", streamID)
+
+	pingSeqNum := 0
+	for {
+		n, err3 := channel.WriteDataChannel([]byte{byte(pingSeqNum % 255)}, false)
+		if err3 != nil || n != 2 {
+			panic(err3)
+		}
+		fmt.Println("sent:", pingSeqNum%255)
+		pingSeqNum++
+
+		buff := make([]byte, 1024)
+		n, _, err = channel.ReadDataChannel(buff)
+		if err != nil || n != 2 {
+			panic(err)
+		}
+		fmt.Println("received:", buff[0], buff[1])
+
+		time.Sleep(3 * time.Second)
+	}
 }
