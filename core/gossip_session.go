@@ -13,8 +13,6 @@ import (
 type GossipSession struct {
 	LocalAddress  *PeerAddress
 	RemoteAddress *PeerAddress
-	//RemoteAddressesMtx *sync.Mutex
-	//SessMtx sync.RWMutex
 	// buffered data is accessed through GossipDM each time
 	GossipDM          *GossipDataManager
 	LocalSessionSide  OperationSideAt
@@ -33,10 +31,7 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	if oc.LocalSessionSide == ServerSide {
 		buf = oc.GossipDM.Read(math.MaxUint64, 0, ServerSide)
 	} else if oc.LocalSessionSide == ClientSide {
-		//oc.RemoteAddressesMtx.Lock()
-		//peerName := oc.RemoteAddress[0].PeerName
 		peerName := oc.RemoteAddress.PeerName
-		//oc.RemoteAddressesMtx.Unlock()
 		buf = oc.GossipDM.Read(peerName, oc.StreamID, ClientSide)
 		if buf == nil {
 			return 0, errors.New("session closed")
@@ -71,7 +66,7 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 		//for _, peerName := range peerNames {
 		//	oc.GossipDM.SendToRemote(peerName, oc.LocalSessionSide, b)
 		//}
-		oc.GossipDM.Peer.GossipMM.SendToRemote(oc.RemoteAddress.PeerName, oc.StreamID, oc.RemoteSessionSide, b)
+		oc.GossipDM.Peer.GossipMM.SendToRemote(oc.RemoteAddress.PeerName, oc.StreamID, oc.RemoteSessionSide, math.MaxUint64, b)
 	} else if oc.LocalSessionSide == ServerSide {
 		// TODO: need to implement (GossipSession::Write)
 

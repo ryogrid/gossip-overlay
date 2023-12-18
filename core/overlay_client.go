@@ -94,30 +94,16 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 	return dc, nil
 }
 
-//// thread for handling handshake packet
-//func (ols *OverlayClient) newHandshakeHandlingThClientSide(remotePeer mesh.PeerName, streamID uint16,
-//	recvPktCh chan *GossipPacket, finNotifyCh chan *ClientInfo) {
-//	// TODO: need to initialization of variables for handshake state recognition (OverlayServer::newHandshakeHandlingThClientSide)
-//	// TODO: need to send ping packet (OverlayServer::newHandshakeHandlingThClientSide)
-//
-//	pkt := <-recvPktCh
-//	fmt.Println(pkt)
-//	// TODO: need to implement (OverlayServer::newHandshakeHandlingTh)
-//	//       - send and recv ping-pong packet
-//
-//	finNotifyCh <- &ClientInfo{remotePeer, streamID}
-//}
-
 func (oc *OverlayClient) NotifyOpenChReqToServer(streamId uint16) {
 retry:
 	// 4way
-	err := oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, ClientSide, []byte(oc.P.GossipDataMan.Self.String()))
+	err := oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, ServerSide, 10*time.Second, 0, []byte(oc.P.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
 		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)
 		goto retry
 	}
-	oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, ClientSide, []byte(oc.P.GossipDataMan.Self.String()))
+	err = oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, ServerSide, 10*time.Second, 1, []byte(oc.P.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
 		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)

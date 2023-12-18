@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
@@ -62,7 +63,7 @@ func (gmm *GossipMessageManager) UnregisterChToHandlerTh(dest mesh.PeerName, str
 	panic("not implemented")
 }
 
-func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, data []byte) error {
+func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, seqNum uint64, data []byte) error {
 	util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
 	c := make(chan struct{})
 	gmm.Actions <- func() {
@@ -98,26 +99,46 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 
 // use at notification of information for CtoC stream establishment (4way handshake)
 // and at doing heartbeat (maybe)
-func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, data []byte) error {
+func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, timeout time.Duration, seqNum uint64, data []byte) error {
 	util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
 
+	var ret error
 	c := make(chan struct{})
+	done := make(chan interface{})
+
+	// timeout
+	go func() {
+		time.Sleep(timeout)
+		close(done)
+	}()
+
 	go func() {
 		defer close(c)
 		var recvPktCh chan *GossipPacket
 		if gmm.GossipDM.Peer.Send != nil {
 			recvPktCh = make(chan *GossipPacket)
 			gmm.RegisterChToHandlerTh(dest, streamID, recvPktCh)
-			gmm.SendToRemote(dest, streamID, recvOpSide, data)
+			gmm.SendToRemote(dest, streamID, recvOpSide, seqNum, data)
 			// TODO: need to implement timeout (GossipMessageManager::SendPingAndWaitPong)
 		} else {
 			panic("no sender configured; not broadcasting update right now")
 		}
 
-		_ = <-recvPktCh
+	loop:
+		for {
+			select {
+			case <-recvPktCh:
+				gmm.UnregisterChToHandlerTh(dest, streamID, recvPktCh)
+				ret = nil
+				break loop
+			case <-done:
+				ret = errors.New("timeout reached")
+				break loop
+			}
+		}
 	}()
 	<-c
-	return nil
+	return ret
 }
 
 // called when any packet received (even if packat is of SCTP CtoC stream)

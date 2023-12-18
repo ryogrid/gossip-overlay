@@ -5,8 +5,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/pion/datachannel"
+	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"sync"
+	"time"
 )
 
 type ClientInfo struct {
@@ -46,25 +48,54 @@ func decodeUint16FromBytes(buf []byte) uint16 {
 	return ret
 }
 
-func (ols *OverlayServer) sendPongPktToClient(remotePeer mesh.PeerName, streamID uint16) error {
-	err := ols.GossipMM.SendToRemote(remotePeer, streamID, ClientSide, []byte{})
+func (ols *OverlayServer) sendPongPktToClient(remotePeer mesh.PeerName, streamID uint16, seqNum uint64) error {
+	err := ols.GossipMM.SendToRemote(remotePeer, streamID, ClientSide, seqNum, []byte{})
 	if err != nil {
-		fmt.Println(err)
-		return err
+		//fmt.Println(err)
+		//return err
+		panic(err)
 	}
+	return nil
 }
 
 // thread for handling client info notify packet of each client
 func (ols *OverlayServer) newHandshakeHandlingThServSide(remotePeer mesh.PeerName, streamID uint16,
-	recvPktCh chan *GossipPacket, finNotifyCh chan *ClientInfo) {
-	// TODO: need to initialization
-
-	// TODO: need to implement (OverlayServer::newHandshakeHandlingTh)
-	//       - recv ping and send pong packet twice
-	//       - when ping-pong x2 is finished, send client info to ols.Info4OLChannelRecvCh channel
+	recvPktCh chan *GossipPacket, finNotifyCh chan *ClientInfo, notifyErrCh chan *ClientInfo) {
 	pkt := <-recvPktCh
-	// checking of first packet is not needed
-	fmt.Println(pkt)
+	if pkt.SeqNum != 0 {
+		// exit thread as handshake failed
+		notifyErrCh <- &ClientInfo{remotePeer, streamID}
+		return
+	}
+	util.OverlayDebugPrintln(pkt)
+	ols.sendPongPktToClient(remotePeer, streamID, 0)
+
+	done := make(chan interface{})
+
+	go func() {
+		time.Sleep(10 * time.Second)
+		close(done)
+	}()
+
+loop:
+	for {
+		select {
+		case pkt = <-recvPktCh:
+			util.OverlayDebugPrintln(pkt)
+			if pkt.SeqNum == 1 {
+				// second packat
+				break loop
+			} else {
+				// exit thread as handshake failed
+				notifyErrCh <- &ClientInfo{remotePeer, streamID}
+				return
+			}
+		case <-done:
+			// exit thread without sending client info
+			return
+		}
+	}
+	ols.sendPongPktToClient(remotePeer, streamID, 1)
 
 	finNotifyCh <- &ClientInfo{remotePeer, streamID}
 }
@@ -73,6 +104,7 @@ func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
 	// "peer name"-"stream id" -> channel to appropriate packet handling thread
 	handshakePktHandleThChans := sync.Map{}
 	finCh := make(chan *ClientInfo, 1)
+	notifyErrCh := make(chan *ClientInfo, 1)
 
 	for {
 		select {
@@ -85,7 +117,7 @@ func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
 				newCh := make(chan *GossipPacket, 1)
 
 				handshakePktHandleThChans.Store(key, newCh)
-				go ols.newHandshakeHandlingThServSide(pkt.FromPeer, pkt.StreamID, newCh, finCh)
+				go ols.newHandshakeHandlingThServSide(pkt.FromPeer, pkt.StreamID, newCh, finCh, notifyErrCh)
 				newCh <- pkt
 			}
 		case finInfo := <-finCh:
@@ -93,6 +125,9 @@ func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
 			handshakePktHandleThChans.Delete(finInfo.RemotePeerName.String() + "-" + string(finInfo.StreamID))
 			// notify new request info to Accept method
 			ols.Info4OLChannelRecvCh <- finInfo
+		case errRemote := <-notifyErrCh:
+			// handshake failed
+			handshakePktHandleThChans.Delete(errRemote.RemotePeerName.String() + "-" + string(errRemote.StreamID))
 		}
 	}
 }
