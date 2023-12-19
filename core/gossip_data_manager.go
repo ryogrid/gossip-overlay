@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
-	"math"
 	"sync"
 )
 
@@ -50,8 +49,7 @@ func NewGossipDataManager(selfname mesh.PeerName) *GossipDataManager {
 		Self: selfname,
 		Peer: nil,
 	}
-	// initialize shared buffer for server side (not used on client side)
-	ret.Write(math.MaxUint64, 0, []byte{})
+
 	return ret
 }
 

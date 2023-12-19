@@ -79,6 +79,7 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 				PktKind:      pktKind,
 			}
 			encodedData := sendObj.Encode()[0]
+			util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: encodedData:", encodedData)
 			for {
 				err := gmm.GossipDM.Peer.Send.GossipUnicast(dest, encodedData)
 				if err == nil {
@@ -148,6 +149,7 @@ func (gmm *GossipMessageManager) OnPacketReceived(src mesh.PeerName, buf []byte)
 	if err != nil {
 		panic(err)
 	}
+	util.OverlayDebugPrintln("GossipMessageManager.OnPacketReceived called. src:", src, " streamId:", gp.StreamID, " buf:", buf)
 
 	if gp.PktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.ReceiverSide == ServerSide {
 		gmm.NotifyPktChForServerSide <- gp

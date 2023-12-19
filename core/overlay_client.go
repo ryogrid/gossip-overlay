@@ -98,13 +98,13 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 func (oc *OverlayClient) NotifyOpenChReqToServer(streamId uint16) {
 retry:
 	// 4way
-	err := oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, ServerSide, 10*time.Second, 0, []byte(oc.P.GossipDataMan.Self.String()))
+	err := oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, ServerSide, 20*time.Second, 0, []byte(oc.P.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
 		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)
 		goto retry
 	}
-	err = oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, ServerSide, 10*time.Second, 1, []byte(oc.P.GossipDataMan.Self.String()))
+	err = oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, ServerSide, 20*time.Second, 1, []byte(oc.P.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
 		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)
