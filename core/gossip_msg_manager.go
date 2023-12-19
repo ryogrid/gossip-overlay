@@ -153,6 +153,7 @@ func (gmm *GossipMessageManager) OnPacketReceived(src mesh.PeerName, buf []byte)
 
 	if gp.PktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.ReceiverSide == ServerSide {
 		util.OverlayDebugPrintln("GossipMessageManager.OnPacketReceived: notify packet received and passed to root handler (ServerSide)")
+		util.OverlayDebugPrintln("gmm.NotifyPktChForServerSide:", gmm.NotifyPktChForServerSide)
 		gmm.NotifyPktChForServerSide <- gp
 		return nil
 	} else if gp.PktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.ReceiverSide == ClientSide {

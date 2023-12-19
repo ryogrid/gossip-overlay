@@ -101,14 +101,18 @@ loop:
 }
 
 func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
+	util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: start")
+
 	// "peer name"-"stream id" -> channel to appropriate packet handling thread
 	handshakePktHandleThChans := sync.Map{}
 	finCh := make(chan *ClientInfo, 1)
 	notifyErrCh := make(chan *ClientInfo, 1)
 
 	for {
+		util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: waiting pkt")
 		select {
 		case pkt := <-ols.GossipMM.NotifyPktChForServerSide:
+			util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: received pkt:", pkt)
 			// pass packet to appropriate handling thread (if not exist, spawn new handling thread)
 			key := pkt.FromPeer.String() + "-" + string(pkt.StreamID)
 			if ch, ok := handshakePktHandleThChans.Load(key); ok {
@@ -130,6 +134,7 @@ func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
 			handshakePktHandleThChans.Delete(errRemote.RemotePeerName.String() + "-" + string(errRemote.StreamID))
 		}
 	}
+	util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: end")
 }
 
 func (ols *OverlayServer) InitClientInfoNotifyPktRootHandlerTh() error {
