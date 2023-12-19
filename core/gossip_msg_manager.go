@@ -14,10 +14,9 @@ type GossipMessageManager struct {
 	LocalAddress *PeerAddress
 	GossipDM     *GossipDataManager
 	//// "<peer name>-<stream id" => channel to appropriate packet handling thread
-	PktHandlers    map[string]chan *GossipPacket
-	PktHandlersMtx sync.Mutex
-	Actions        chan<- func()
-	Quit           chan struct{}
+	PktHandlers sync.Map
+	Actions     chan<- func()
+	Quit        chan struct{}
 	// notification packet from client is sent to this channel
 	NotifyPktChForServerSide chan *GossipPacket
 }
@@ -27,8 +26,7 @@ func NewGossipMessageManager(localAddress *PeerAddress, gossipDM *GossipDataMana
 	ret := &GossipMessageManager{
 		LocalAddress:             localAddress,
 		GossipDM:                 gossipDM,
-		PktHandlers:              make(map[string]chan *GossipPacket),
-		PktHandlersMtx:           sync.Mutex{},
+		PktHandlers:              sync.Map{},
 		Actions:                  actions,
 		Quit:                     make(chan struct{}),
 		NotifyPktChForServerSide: nil,
@@ -55,13 +53,11 @@ func (gmm *GossipMessageManager) Stop() {
 }
 
 func (gmm *GossipMessageManager) RegisterChToHandlerTh(dest mesh.PeerName, streamID uint16, recvPktCh chan *GossipPacket) {
-	// TODO: need to implement (GossipMessageManager::RegisterChToHandlerTh)
-	panic("not implemented")
+	gmm.PktHandlers.Store(dest.String()+"-"+string(streamID), recvPktCh)
 }
 
 func (gmm *GossipMessageManager) UnregisterChToHandlerTh(dest mesh.PeerName, streamID uint16, recvPktCh chan *GossipPacket) {
-	// TODO: need to implement (GossipMessageManager::UnregisterChToHandlerTh)
-	panic("not implemented")
+	gmm.PktHandlers.Delete(dest.String() + "-" + string(streamID))
 }
 
 func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, seqNum uint64, data []byte) error {
@@ -157,11 +153,10 @@ func (gmm *GossipMessageManager) OnPacketReceived(src mesh.PeerName, buf []byte)
 		gmm.NotifyPktChForServerSide <- gp
 		return nil
 	} else if gp.PktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.ReceiverSide == ClientSide {
-		gmm.PktHandlersMtx.Lock()
-		destCh := gmm.PktHandlers[gp.FromPeer.String()+"-"+string(gp.StreamID)]
-		gmm.PktHandlersMtx.Unlock()
-		if destCh != nil {
-			destCh <- gp
+
+		destCh, ok := gmm.PktHandlers.Load(gp.FromPeer.String() + "-" + string(gp.StreamID))
+		if ok {
+			destCh.(chan *GossipPacket) <- gp
 			return nil
 		} else {
 			panic("illigal internal state!")

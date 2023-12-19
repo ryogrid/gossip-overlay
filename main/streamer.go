@@ -18,8 +18,8 @@ import (
 )
 
 /*
-.\streamer.exe -side recv -hwaddr 00:00:00:00:00:02 -nickname b -mesh :6002 -debug false | Tee-Object -FilePath ".\send2-104.txt"
-.\streamer.exe -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -destname 2 -peer 127.0.0.1:6002 -debug false | Tee-Object -FilePath ".\send3-104.txt"
+.\streamer.exe -side recv -hwaddr 00:00:00:00:00:02 -nickname b -mesh :6002 -debug false | Tee-Object -FilePath ".\recv-1.txt"
+.\streamer.exe -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -destname 2 -peer 127.0.0.1:6002 -debug false | Tee-Object -FilePath ".\send-1.txt"
 */
 func main() {
 	peers := &util.Stringset{}
