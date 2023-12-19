@@ -60,7 +60,7 @@ func (ols *OverlayServer) sendPongPktToClient(remotePeer mesh.PeerName, streamID
 
 // thread for handling client info notify packet of each client
 func (ols *OverlayServer) newHandshakeHandlingThServSide(remotePeer mesh.PeerName, streamID uint16,
-	recvPktCh chan *GossipPacket, finNotifyCh chan *ClientInfo, notifyErrCh chan *ClientInfo) {
+	recvPktCh <-chan *GossipPacket, finNotifyCh chan<- *ClientInfo, notifyErrCh chan<- *ClientInfo) {
 	pkt := <-recvPktCh
 	if pkt.SeqNum != 0 {
 		// exit thread as handshake failed
