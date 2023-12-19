@@ -43,11 +43,11 @@ func main() {
 
 	host, portStr, err := net.SplitHostPort(*meshListen)
 	if err != nil {
-		logger.Fatalf("mesh address: %s: %v", *meshListen, err)
+		logger.Fatalf("mesh host: %s: %v", *meshListen, err)
 	}
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		logger.Fatalf("mesh address: %s: %v", *meshListen, err)
+		logger.Fatalf("mesh port: %d: %v", port, err)
 	}
 
 	meshConf := mesh.Config{
@@ -131,7 +131,7 @@ func serverRoutine(p *core.Peer) {
 }
 
 func clientRoutine(p *core.Peer) {
-	util.OverlayDebugPrintln("start serverRoutine")
+	util.OverlayDebugPrintln("start clientRoutine")
 	oc, err := core.NewOverlayClient(p, p.Destname, core.NewGossipMessageManager(&core.PeerAddress{p.GossipDataMan.Self}, p.GossipDataMan))
 	if err != nil {
 		panic(err)

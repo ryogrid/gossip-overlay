@@ -29,7 +29,7 @@ func NewGossipMessageManager(localAddress *PeerAddress, gossipDM *GossipDataMana
 		PktHandlers:              sync.Map{},
 		Actions:                  actions,
 		Quit:                     make(chan struct{}),
-		NotifyPktChForServerSide: nil,
+		NotifyPktChForServerSide: make(chan *GossipPacket),
 	}
 
 	go ret.loop(actions)
@@ -152,10 +152,11 @@ func (gmm *GossipMessageManager) OnPacketReceived(src mesh.PeerName, buf []byte)
 	util.OverlayDebugPrintln("GossipMessageManager.OnPacketReceived called. src:", src, " streamId:", gp.StreamID, " buf:", buf)
 
 	if gp.PktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.ReceiverSide == ServerSide {
+		util.OverlayDebugPrintln("GossipMessageManager.OnPacketReceived: notify packet received and passed to root handler (ServerSide)")
 		gmm.NotifyPktChForServerSide <- gp
 		return nil
 	} else if gp.PktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.ReceiverSide == ClientSide {
-
+		util.OverlayDebugPrintln("GossipMessageManager.OnPacketReceived: notify packet received and passed to each handler (ClientSide)")
 		destCh, ok := gmm.PktHandlers.Load(gp.FromPeer.String() + "-" + string(gp.StreamID))
 		if ok {
 			destCh.(chan *GossipPacket) <- gp
