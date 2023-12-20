@@ -121,6 +121,7 @@ func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamI
 		if gmm.GossipDM.Peer.Send != nil {
 			recvPktCh = make(chan *GossipPacket)
 			gmm.RegisterChToHandlerTh(dest, streamID, recvPktCh)
+			gmm.GossipDM.bufs.Store(dest.String()+"-"+string(streamID), make([]byte, 0))
 			gmm.SendToRemote(dest, streamID, recvOpSide, seqNum, data)
 		} else {
 			panic("no sender configured; not broadcasting update right now")
@@ -130,15 +131,18 @@ func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamI
 		for {
 			select {
 			case <-recvPktCh:
+				util.OverlayDebugPrintln("GossipMessageManager.SendPingAndPong: received pong packet")
 				gmm.UnregisterChToHandlerTh(dest, streamID, recvPktCh)
 				ret = nil
 				break loop
 			case <-done:
+				gmm.UnregisterChToHandlerTh(dest, streamID, recvPktCh)
 				ret = errors.New("timeout reached")
 				break loop
 			}
 		}
 	}()
+	gmm.GossipDM.bufs.Delete(dest.String() + "-" + string(streamID))
 	<-c
 	return ret
 }

@@ -83,9 +83,11 @@ loop:
 		case pkt = <-recvPktCh:
 			util.OverlayDebugPrintln(pkt)
 			if pkt.SeqNum == 1 {
+				util.OverlayDebugPrintln("OverlayServer::newHandshakeHandlingThServSide: received expected packet")
 				// second packat
 				break loop
 			} else {
+				util.OverlayDebugPrintln("OverlayServer::newHandshakeHandlingThServSide: received unexpected packet")
 				// exit thread as handshake failed
 				notifyErrCh <- &ClientInfo{remotePeer, streamID}
 				return
