@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -60,6 +61,7 @@ func main() {
 		TrustedSubnets:     []*net.IPNet{},
 	}
 
+	runtime.GOMAXPROCS(10)
 	name, err := mesh.PeerNameFromString(*hwaddr)
 	if err != nil {
 		logger.Fatalf("%s: %v", *hwaddr, err)
@@ -101,7 +103,8 @@ func main() {
 
 func serverRoutine(p *core.Peer) {
 	util.OverlayDebugPrintln("start serverRoutine")
-	oserv, err := core.NewOverlayServer(p, core.NewGossipMessageManager(&core.PeerAddress{p.GossipDataMan.Self}, p.GossipDataMan))
+	//oserv, err := core.NewOverlayServer(p, core.NewGossipMessageManager(&core.PeerAddress{p.GossipDataMan.Self}, p.GossipDataMan))
+	oserv, err := core.NewOverlayServer(p, p.GossipMM)
 	if err != nil {
 		panic(err)
 	}
