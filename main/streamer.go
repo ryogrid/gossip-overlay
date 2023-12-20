@@ -103,7 +103,6 @@ func main() {
 
 func serverRoutine(p *core.Peer) {
 	util.OverlayDebugPrintln("start serverRoutine")
-	//oserv, err := core.NewOverlayServer(p, core.NewGossipMessageManager(&core.PeerAddress{p.GossipDataMan.Self}, p.GossipDataMan))
 	oserv, err := core.NewOverlayServer(p, p.GossipMM)
 	if err != nil {
 		panic(err)
