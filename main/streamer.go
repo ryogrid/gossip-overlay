@@ -95,7 +95,8 @@ func main() {
 	} else if *side == "recv" {
 		go serverRoutine(p)
 	} else {
-		panic("invalid side")
+		//panic("invalid side")
+		// do nothing (relay)
 	}
 
 	logger.Print(<-errs)
