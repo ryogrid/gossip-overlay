@@ -4,7 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/pion/datachannel"
-	"github.com/ryogrid/gossip-overlay/core"
+	"github.com/ryogrid/gossip-overlay/gossip"
+	"github.com/ryogrid/gossip-overlay/overlay"
 	"github.com/ryogrid/gossip-overlay/overlay_setting"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
@@ -28,13 +29,13 @@ func main() {
 	var (
 		side       = flag.String("side", "relay", "specify peer type (default: relay))")
 		meshListen = flag.String("mesh", net.JoinHostPort("0.0.0.0", strconv.Itoa(mesh.Port)), "mesh listen address")
-		hwaddr     = flag.String("hwaddr", util.MustHardwareAddr(), "MAC address, i.e. mesh Peer ID")
-		nickname   = flag.String("nickname", util.MustHostname(), "Peer nickname")
+		hwaddr     = flag.String("hwaddr", util.MustHardwareAddr(), "MAC address, i.e. mesh peer ID")
+		nickname   = flag.String("nickname", util.MustHostname(), "peer nickname")
 		channel    = flag.String("channel", "default", "gossip channel name")
-		destname   = flag.String("destname", "", "destination Peer name (optional)")
+		destname   = flag.String("destname", "", "destination peer name (optional)")
 		debug      = flag.String("debug", "false", "print debug info, true of false (optional)")
 	)
-	flag.Var(peers, "peer", "initial Peer (may be repeated)")
+	flag.Var(peers, "peer", "initial peer (may be repeated)")
 	flag.Parse()
 
 	if *debug == "true" {
@@ -76,7 +77,7 @@ func main() {
 		}
 	}
 
-	p := core.NewPeer(name, logger, mesh.PeerName(destNameNum), nickname, channel, meshListen, &meshConf, peers)
+	p := gossip.NewPeer(name, logger, mesh.PeerName(destNameNum), nickname, channel, meshListen, &meshConf, peers)
 
 	defer func() {
 		logger.Printf("mesh router stopping")
@@ -104,9 +105,9 @@ func main() {
 	logger.Print(<-errs)
 }
 
-func serverRoutine(p *core.Peer) {
+func serverRoutine(p *gossip.Peer) {
 	util.OverlayDebugPrintln("start serverRoutine")
-	oserv, err := core.NewOverlayServer(p, p.GossipMM)
+	oserv, err := overlay.NewOverlayServer(p, p.GossipMM)
 	if err != nil {
 		panic(err)
 	}
@@ -142,9 +143,9 @@ func serverRoutine(p *core.Peer) {
 	}
 }
 
-func clientRoutine(p *core.Peer) {
+func clientRoutine(p *gossip.Peer) {
 	util.OverlayDebugPrintln("start clientRoutine")
-	oc, err := core.NewOverlayClient(p, p.Destname, p.GossipMM)
+	oc, err := overlay.NewOverlayClient(p, p.Destname, p.GossipMM)
 	if err != nil {
 		panic(err)
 	}

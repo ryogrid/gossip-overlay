@@ -1,4 +1,4 @@
-package core
+package gossip
 
 import "github.com/weaveworks/mesh"
 

@@ -1,4 +1,4 @@
-package core
+package overlay
 
 import (
 	"bytes"
@@ -17,12 +17,12 @@ import (
 
 // wrapper of sctp.Client
 type OverlayClient struct {
-	P              *Peer
+	P              *gossip.Peer
 	RemotePeerName mesh.PeerName
 	GossipMM       *gossip.GossipMessageManager
 }
 
-func NewOverlayClient(p *Peer, remotePeer mesh.PeerName, gossipMM *gossip.GossipMessageManager) (*OverlayClient, error) {
+func NewOverlayClient(p *gossip.Peer, remotePeer mesh.PeerName, gossipMM *gossip.GossipMessageManager) (*OverlayClient, error) {
 	ret := &OverlayClient{
 		P:              p,
 		RemotePeerName: remotePeer,

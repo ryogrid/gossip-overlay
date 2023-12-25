@@ -1,4 +1,4 @@
-package core
+package overlay
 
 import (
 	"bytes"
@@ -19,12 +19,12 @@ type ClientInfo struct {
 
 // wrapper of sctp.Server
 type OverlayServer struct {
-	P                    *Peer
+	P                    *gossip.Peer
 	Info4OLChannelRecvCh chan *ClientInfo
 	GossipMM             *gossip.GossipMessageManager
 }
 
-func NewOverlayServer(p *Peer, gossipMM *gossip.GossipMessageManager) (*OverlayServer, error) {
+func NewOverlayServer(p *gossip.Peer, gossipMM *gossip.GossipMessageManager) (*OverlayServer, error) {
 	ret := &OverlayServer{
 		P:                    p,
 		Info4OLChannelRecvCh: nil,
