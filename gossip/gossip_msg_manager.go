@@ -11,12 +11,12 @@ import (
 )
 
 type GossipMessageManager struct {
-	LocalAddress *PeerAddress
-	GossipDM     *GossipDataManager
+	localAddress *PeerAddress
+	gossipDM     *GossipDataManager
 	//// "<peer name>-<stream id" => channel to appropriate packet handling thread
-	PktHandlers sync.Map
-	Actions     chan<- func()
-	Quit        chan struct{}
+	pktHandlers sync.Map
+	actions     chan<- func()
+	quit        chan struct{}
 	// notification packet from client is sent to this channel
 	NotifyPktChForServerSide chan *GossipPacket
 }
@@ -24,11 +24,11 @@ type GossipMessageManager struct {
 func NewGossipMessageManager(localAddress *PeerAddress, gossipDM *GossipDataManager) *GossipMessageManager {
 	actions := make(chan func())
 	ret := &GossipMessageManager{
-		LocalAddress:             localAddress,
-		GossipDM:                 gossipDM,
-		PktHandlers:              sync.Map{},
-		Actions:                  actions,
-		Quit:                     make(chan struct{}),
+		localAddress:             localAddress,
+		gossipDM:                 gossipDM,
+		pktHandlers:              sync.Map{},
+		actions:                  actions,
+		quit:                     make(chan struct{}),
 		NotifyPktChForServerSide: make(chan *GossipPacket),
 	}
 
@@ -42,36 +42,36 @@ func (gmm *GossipMessageManager) loop(actions <-chan func()) {
 		select {
 		case f := <-actions:
 			f()
-		case <-gmm.Quit:
+		case <-gmm.quit:
 			return
 		}
 	}
 }
 
-func (gmm *GossipMessageManager) Stop() {
-	close(gmm.Quit)
+func (gmm *GossipMessageManager) stop() {
+	close(gmm.quit)
 }
 
-func (gmm *GossipMessageManager) RegisterChToHandlerTh(dest mesh.PeerName, streamID uint16, recvPktCh chan *GossipPacket) {
-	gmm.PktHandlers.Store(dest.String()+"-"+string(streamID), recvPktCh)
+func (gmm *GossipMessageManager) registerChToHandlerTh(dest mesh.PeerName, streamID uint16, recvPktCh chan *GossipPacket) {
+	gmm.pktHandlers.Store(dest.String()+"-"+string(streamID), recvPktCh)
 }
 
-func (gmm *GossipMessageManager) UnregisterChToHandlerTh(dest mesh.PeerName, streamID uint16, recvPktCh chan *GossipPacket) {
-	gmm.PktHandlers.Delete(dest.String() + "-" + string(streamID))
+func (gmm *GossipMessageManager) unregisterChToHandlerTh(dest mesh.PeerName, streamID uint16, recvPktCh chan *GossipPacket) {
+	gmm.pktHandlers.Delete(dest.String() + "-" + string(streamID))
 }
 
 func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, seqNum uint64, data []byte) error {
 	util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
 	c := make(chan struct{})
-	gmm.Actions <- func() {
+	gmm.actions <- func() {
 		defer close(c)
-		if gmm.GossipDM.peer.send != nil {
+		if gmm.gossipDM.peer.send != nil {
 			pktKind := PACKET_KIND_NOTIFY_PEER_INFO
 			if seqNum == math.MaxUint64 {
 				pktKind = PACKET_KIND_CTC_DATA
 			}
 			sendObj := GossipPacket{
-				FromPeer:     gmm.LocalAddress.PeerName,
+				FromPeer:     gmm.localAddress.PeerName,
 				buf:          data,
 				receiverSide: recvOpSide,
 				StreamID:     streamID,
@@ -81,7 +81,7 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 			encodedData := sendObj.Encode()[0]
 			util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: encodedData:", encodedData)
 			for {
-				err := gmm.GossipDM.peer.send.GossipUnicast(dest, encodedData)
+				err := gmm.gossipDM.peer.send.GossipUnicast(dest, encodedData)
 				if err == nil {
 					break
 				} else {
@@ -92,7 +92,7 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 				}
 			}
 		} else {
-			gmm.GossipDM.peer.logger.Printf("no sender configured; not broadcasting update right now")
+			gmm.gossipDM.peer.logger.Printf("no sender configured; not broadcasting update right now")
 		}
 	}
 	<-c
@@ -118,10 +118,10 @@ func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamI
 	go func() {
 		defer close(c)
 		var recvPktCh chan *GossipPacket
-		if gmm.GossipDM.peer.send != nil {
+		if gmm.gossipDM.peer.send != nil {
 			recvPktCh = make(chan *GossipPacket)
-			gmm.RegisterChToHandlerTh(dest, streamID, recvPktCh)
-			gmm.GossipDM.bufs.Store(dest.String()+"-"+string(streamID), make([]byte, 0))
+			gmm.registerChToHandlerTh(dest, streamID, recvPktCh)
+			gmm.gossipDM.bufs.Store(dest.String()+"-"+string(streamID), make([]byte, 0))
 			gmm.SendToRemote(dest, streamID, recvOpSide, seqNum, data)
 		} else {
 			panic("no sender configured; not broadcasting update right now")
@@ -132,37 +132,37 @@ func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamI
 			select {
 			case <-recvPktCh:
 				util.OverlayDebugPrintln("GossipMessageManager.SendPingAndPong: received pong packet")
-				gmm.UnregisterChToHandlerTh(dest, streamID, recvPktCh)
+				gmm.unregisterChToHandlerTh(dest, streamID, recvPktCh)
 				ret = nil
 				break loop
 			case <-done:
-				gmm.UnregisterChToHandlerTh(dest, streamID, recvPktCh)
+				gmm.unregisterChToHandlerTh(dest, streamID, recvPktCh)
 				ret = errors.New("timeout reached")
 				break loop
 			}
 		}
 	}()
-	gmm.GossipDM.bufs.Delete(dest.String() + "-" + string(streamID))
+	gmm.gossipDM.bufs.Delete(dest.String() + "-" + string(streamID))
 	<-c
 	return ret
 }
 
 // called when any packet received (even if packat is of SCTP CtoC stream)
-func (gmm *GossipMessageManager) OnPacketReceived(src mesh.PeerName, buf []byte) error {
+func (gmm *GossipMessageManager) onPacketReceived(src mesh.PeerName, buf []byte) error {
 	gp, err := decodeGossipPacket(buf)
 	if err != nil {
 		panic(err)
 	}
-	util.OverlayDebugPrintln("GossipMessageManager.OnPacketReceived called. src:", src, " streamId:", gp.StreamID, " buf:", buf)
+	util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID, " buf:", buf)
 
 	if gp.pktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.receiverSide == ServerSide {
-		util.OverlayDebugPrintln("GossipMessageManager.OnPacketReceived: notify packet received and passed to root handler (ServerSide)")
+		util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived: notify packet received and passed to root handler (ServerSide)")
 		gmm.NotifyPktChForServerSide <- gp
-		util.OverlayDebugPrintln("GossipMessageManager.OnPacketReceived: send to root handler finished (ServerSide)")
+		util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived: send to root handler finished (ServerSide)")
 		return nil
 	} else if gp.pktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.receiverSide == ClientSide {
-		util.OverlayDebugPrintln("GossipMessageManager.OnPacketReceived: notify packet received and passed to each handler (ClientSide)")
-		destCh, ok := gmm.PktHandlers.Load(gp.FromPeer.String() + "-" + string(gp.StreamID))
+		util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived: notify packet received and passed to each handler (ClientSide)")
+		destCh, ok := gmm.pktHandlers.Load(gp.FromPeer.String() + "-" + string(gp.StreamID))
 		if ok {
 			destCh.(chan *GossipPacket) <- gp
 			return nil
@@ -172,17 +172,17 @@ func (gmm *GossipMessageManager) OnPacketReceived(src mesh.PeerName, buf []byte)
 	}
 
 	// when packat is of CtoC stream
-	err2 := gmm.GossipDM.write(gp.FromPeer, gp.StreamID, gp.buf)
+	err2 := gmm.gossipDM.write(gp.FromPeer, gp.StreamID, gp.buf)
 	if err2 != nil {
 		panic(err2)
 	}
-	util.OverlayDebugPrintln(fmt.Sprintf("OnPacketReceived %s %v", src, buf))
+	util.OverlayDebugPrintln(fmt.Sprintf("onPacketReceived %s %v", src, buf))
 	return nil
 }
 
-func (gmm *GossipMessageManager) WhenClose(remotePeer mesh.PeerName, streamID uint16) error {
-	util.OverlayDebugPrintln("GossipDMessageManager.WhenClose called. remotePeer:", remotePeer, " streamID:", streamID)
-	gmm.GossipDM.removeBuffer(remotePeer, streamID)
+func (gmm *GossipMessageManager) whenClose(remotePeer mesh.PeerName, streamID uint16) error {
+	util.OverlayDebugPrintln("GossipDMessageManager.whenClose called. remotePeer:", remotePeer, " streamID:", streamID)
+	gmm.gossipDM.removeBuffer(remotePeer, streamID)
 
 	return nil
 }

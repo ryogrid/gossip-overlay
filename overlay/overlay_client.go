@@ -1,8 +1,6 @@
 package overlay
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"github.com/pion/datachannel"
 	"github.com/pion/logging"
@@ -17,31 +15,19 @@ import (
 
 // wrapper of sctp.Client
 type OverlayClient struct {
-	P              *gossip.Peer
-	RemotePeerName mesh.PeerName
-	GossipMM       *gossip.GossipMessageManager
+	peer           *gossip.Peer
+	remotePeerName mesh.PeerName
+	gossipMM       *gossip.GossipMessageManager
 }
 
 func NewOverlayClient(p *gossip.Peer, remotePeer mesh.PeerName, gossipMM *gossip.GossipMessageManager) (*OverlayClient, error) {
 	ret := &OverlayClient{
-		P:              p,
-		RemotePeerName: remotePeer,
-		GossipMM:       gossipMM,
+		peer:           p,
+		remotePeerName: remotePeer,
+		gossipMM:       gossipMM,
 	}
 
 	return ret, nil
-}
-
-func encodeUint64ToBytes(peerName uint64) []byte {
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, &peerName)
-	return buf.Bytes()
-}
-
-func encodeUint16ToBytes(streamId uint16) []byte {
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, &streamId)
-	return buf.Bytes()
 }
 
 func genRandomStreamId() uint16 {
@@ -52,7 +38,7 @@ func genRandomStreamId() uint16 {
 }
 
 func (oc *OverlayClient) establishCtoCStreamInner(streamID uint16) (*sctp.Association, error) {
-	conn, err := oc.P.GossipDataMan.NewGossipSessionForClientToClient(oc.RemotePeerName, streamID)
+	conn, err := oc.peer.GossipDataMan.NewGossipSessionForClientToClient(oc.remotePeerName, streamID)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -100,14 +86,14 @@ func (oc *OverlayClient) NotifyOpenChReqToServer(streamId uint16) {
 	util.OverlayDebugPrintln("OverlayClient::NotifyOpenChReqToServer called", streamId)
 retry:
 	// 4way
-	err := oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, gossip.ServerSide, 60*time.Second, 0, []byte(oc.P.GossipDataMan.Self.String()))
+	err := oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 60*time.Second, 0, []byte(oc.peer.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
 		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)
 		goto retry
 	}
 	util.OverlayDebugPrintln("first GossipMessageManager.SendPingAndWaitPong call returned")
-	err = oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, gossip.ServerSide, 60*time.Second, 1, []byte(oc.P.GossipDataMan.Self.String()))
+	err = oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 60*time.Second, 1, []byte(oc.peer.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
 		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)

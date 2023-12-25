@@ -1,8 +1,6 @@
 package overlay
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"github.com/pion/datachannel"
 	"github.com/ryogrid/gossip-overlay/gossip"
@@ -12,23 +10,23 @@ import (
 	"time"
 )
 
-type ClientInfo struct {
-	RemotePeerName mesh.PeerName
-	StreamID       uint16
+type clientInfo struct {
+	remotePeerName mesh.PeerName
+	streamID       uint16
 }
 
 // wrapper of sctp.Server
 type OverlayServer struct {
-	P                    *gossip.Peer
-	Info4OLChannelRecvCh chan *ClientInfo
-	GossipMM             *gossip.GossipMessageManager
+	peer                 *gossip.Peer
+	info4OLChannelRecvCh chan *clientInfo
+	gossipMM             *gossip.GossipMessageManager
 }
 
 func NewOverlayServer(p *gossip.Peer, gossipMM *gossip.GossipMessageManager) (*OverlayServer, error) {
 	ret := &OverlayServer{
-		P:                    p,
-		Info4OLChannelRecvCh: nil,
-		GossipMM:             gossipMM,
+		peer:                 p,
+		info4OLChannelRecvCh: nil,
+		gossipMM:             gossipMM,
 	}
 
 	// start root handling thread for client info notify packet
@@ -37,20 +35,8 @@ func NewOverlayServer(p *gossip.Peer, gossipMM *gossip.GossipMessageManager) (*O
 	return ret, nil
 }
 
-func decodeUint64FromBytes(buf []byte) uint64 {
-	var ret uint64
-	binary.Read(bytes.NewBuffer(buf), binary.LittleEndian, &ret)
-	return ret
-}
-
-func decodeUint16FromBytes(buf []byte) uint16 {
-	var ret uint16
-	binary.Read(bytes.NewBuffer(buf), binary.LittleEndian, &ret)
-	return ret
-}
-
 func (ols *OverlayServer) sendPongPktToClient(remotePeer mesh.PeerName, streamID uint16, seqNum uint64) error {
-	err := ols.GossipMM.SendToRemote(remotePeer, streamID, gossip.ClientSide, seqNum, []byte{})
+	err := ols.gossipMM.SendToRemote(remotePeer, streamID, gossip.ClientSide, seqNum, []byte{})
 	if err != nil {
 		//fmt.Println(err)
 		//return err
@@ -61,11 +47,11 @@ func (ols *OverlayServer) sendPongPktToClient(remotePeer mesh.PeerName, streamID
 
 // thread for handling client info notify packet of each client
 func (ols *OverlayServer) newHandshakeHandlingThServSide(remotePeer mesh.PeerName, streamID uint16,
-	recvPktCh <-chan *gossip.GossipPacket, finNotifyCh chan<- *ClientInfo, notifyErrCh chan<- *ClientInfo) {
+	recvPktCh <-chan *gossip.GossipPacket, finNotifyCh chan<- *clientInfo, notifyErrCh chan<- *clientInfo) {
 	pkt := <-recvPktCh
 	if pkt.SeqNum != 0 {
 		// exit thread as handshake failed
-		notifyErrCh <- &ClientInfo{remotePeer, streamID}
+		notifyErrCh <- &clientInfo{remotePeer, streamID}
 		return
 	}
 	util.OverlayDebugPrintln(pkt)
@@ -90,7 +76,7 @@ loop:
 			} else {
 				util.OverlayDebugPrintln("OverlayServer::newHandshakeHandlingThServSide: received unexpected packet")
 				// exit thread as handshake failed
-				notifyErrCh <- &ClientInfo{remotePeer, streamID}
+				notifyErrCh <- &clientInfo{remotePeer, streamID}
 				return
 			}
 		case <-done:
@@ -100,7 +86,7 @@ loop:
 	}
 	ols.sendPongPktToClient(remotePeer, streamID, 1)
 
-	finNotifyCh <- &ClientInfo{remotePeer, streamID}
+	finNotifyCh <- &clientInfo{remotePeer, streamID}
 }
 
 func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
@@ -108,13 +94,13 @@ func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
 
 	// "peer name"-"stream id" -> channel to appropriate packet handling thread
 	handshakePktHandleThChans := sync.Map{}
-	finCh := make(chan *ClientInfo, 1)
-	notifyErrCh := make(chan *ClientInfo, 1)
+	finCh := make(chan *clientInfo, 1)
+	notifyErrCh := make(chan *clientInfo, 1)
 
 	for {
 		util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: waiting pkt")
 		select {
-		case pkt := <-ols.GossipMM.NotifyPktChForServerSide:
+		case pkt := <-ols.gossipMM.NotifyPktChForServerSide:
 			util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: received pkt:", pkt)
 			// pass packet to appropriate handling thread (if not exist, spawn new handling thread)
 			key := pkt.FromPeer.String() + "-" + string(pkt.StreamID)
@@ -129,19 +115,19 @@ func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
 			}
 		case finInfo := <-finCh:
 			// remove channel to notify origin thread
-			handshakePktHandleThChans.Delete(finInfo.RemotePeerName.String() + "-" + string(finInfo.StreamID))
+			handshakePktHandleThChans.Delete(finInfo.remotePeerName.String() + "-" + string(finInfo.streamID))
 			// notify new request info to Accept method
-			ols.Info4OLChannelRecvCh <- finInfo
+			ols.info4OLChannelRecvCh <- finInfo
 		case errRemote := <-notifyErrCh:
 			// handshake failed
-			handshakePktHandleThChans.Delete(errRemote.RemotePeerName.String() + "-" + string(errRemote.StreamID))
+			handshakePktHandleThChans.Delete(errRemote.remotePeerName.String() + "-" + string(errRemote.streamID))
 		}
 	}
 	util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: end")
 }
 
 func (ols *OverlayServer) InitClientInfoNotifyPktRootHandlerTh() error {
-	ols.Info4OLChannelRecvCh = make(chan *ClientInfo, 1)
+	ols.info4OLChannelRecvCh = make(chan *clientInfo, 1)
 
 	go ols.ClientInfoNotifyPktRootHandlerTh()
 
@@ -149,19 +135,19 @@ func (ols *OverlayServer) InitClientInfoNotifyPktRootHandlerTh() error {
 }
 
 func (ols *OverlayServer) Accept() (*datachannel.DataChannel, mesh.PeerName, uint16, error) {
-	clientInfo := <-ols.Info4OLChannelRecvCh
-	fmt.Println(clientInfo)
-	olc, err := NewOverlayClient(ols.P, clientInfo.RemotePeerName, ols.GossipMM)
+	clInfo := <-ols.info4OLChannelRecvCh
+	fmt.Println(clInfo)
+	olc, err := NewOverlayClient(ols.peer, clInfo.remotePeerName, ols.gossipMM)
 	if err != nil {
 		panic(err)
 	}
 
-	dc, _, err2 := olc.OpenChannel(clientInfo.StreamID)
+	dc, _, err2 := olc.OpenChannel(clInfo.streamID)
 	if err2 != nil {
 		panic(err2)
 	}
 
-	return dc, clientInfo.RemotePeerName, clientInfo.StreamID, nil
+	return dc, clInfo.remotePeerName, clInfo.streamID, nil
 }
 
 func (ols *OverlayServer) Close() error {

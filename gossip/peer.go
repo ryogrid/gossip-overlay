@@ -109,5 +109,5 @@ func (p *Peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.G
 // Merge the gossiped data represented by buf into our GossipDataManager.
 func (p *Peer) OnGossipUnicast(src mesh.PeerName, buf []byte) error {
 	util.OverlayDebugPrintln("OnGossipUnicast called")
-	return p.GossipMM.OnPacketReceived(src, buf)
+	return p.GossipMM.onPacketReceived(src, buf)
 }

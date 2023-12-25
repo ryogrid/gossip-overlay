@@ -48,7 +48,7 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 
 // Close closes the conn and releases any Read calls
 func (oc *GossipSession) Close() error {
-	oc.gossipDM.peer.GossipMM.WhenClose(oc.remoteAddress.PeerName, oc.StreamID)
+	oc.gossipDM.peer.GossipMM.whenClose(oc.remoteAddress.PeerName, oc.StreamID)
 
 	return nil
 }
