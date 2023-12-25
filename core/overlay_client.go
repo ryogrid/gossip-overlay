@@ -123,9 +123,12 @@ func (oc *OverlayClient) OpenChannel(streamId uint16) (*datachannel.DataChannel,
 		streamId_ = genRandomStreamId()
 	}
 
-	oc.NotifyOpenChReqToServer(streamId)
+	if streamId == math.MaxUint16 {
+		// when client side initialization
+		oc.NotifyOpenChReqToServer(streamId_)
+	}
 
-	overlayStream, err := oc.establishCtoCStream(streamId)
+	overlayStream, err := oc.establishCtoCStream(streamId_)
 	if err != nil {
 		panic(err)
 		//fmt.Println(err)

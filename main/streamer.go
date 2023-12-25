@@ -116,13 +116,16 @@ func serverRoutine(p *core.Peer) {
 
 	pongSeqNum := 0
 	for {
+		util.OverlayDebugPrintln("call ReadDataChannel!")
 		buff := make([]byte, 1024)
 		n1, _, err3 := channel.ReadDataChannel(buff)
 		if err3 != nil || n1 != 1 {
+			util.OverlayDebugPrintln("panic occured at ReadDataChannel!", err3, n1)
 			panic(err)
 		}
 		fmt.Println("received:", buff[0])
 
+		util.OverlayDebugPrintln("call WriteDataChannel!")
 		n2, err4 := channel.WriteDataChannel([]byte{byte(pongSeqNum % 255), buff[0]}, false)
 		if err4 != nil || n2 != 2 {
 			panic(err4)
@@ -147,16 +150,20 @@ func clientRoutine(p *core.Peer) {
 
 	pingSeqNum := 0
 	for {
+		util.OverlayDebugPrintln("call WriteDataChannel!")
 		n, err3 := channel.WriteDataChannel([]byte{byte(pingSeqNum % 255)}, false)
-		if err3 != nil || n != 2 {
+		if err3 != nil || n != 1 {
+			util.OverlayDebugPrintln("panic occured at WriteDataChannel!", err3, n)
 			panic(err3)
 		}
 		fmt.Println("sent:", pingSeqNum%255)
 		pingSeqNum++
 
+		util.OverlayDebugPrintln("call ReadDataChannel!")
 		buff := make([]byte, 1024)
 		n, _, err = channel.ReadDataChannel(buff)
 		if err != nil || n != 2 {
+			util.OverlayDebugPrintln("panic occured at ReadDataChannel!", err, n)
 			panic(err)
 		}
 		fmt.Println("received:", buff[0], buff[1])
