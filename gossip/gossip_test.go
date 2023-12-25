@@ -1,4 +1,4 @@
-package core
+package gossip
 
 import (
 	"fmt"
@@ -13,11 +13,11 @@ func TestSerializeDeserialize(t *testing.T) {
 	buf := gp.Encode()
 	fmt.Println(buf)
 
-	gp2, err := DecodeGossipPacket(buf[0])
+	gp2, err := decodeGossipPacket(buf[0])
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(gp2)
-	fmt.Println(gp2.Buf)
-	fmt.Println(gp2.ReceiverSide)
+	fmt.Println(gp2.buf)
+	fmt.Println(gp2.receiverSide)
 }
