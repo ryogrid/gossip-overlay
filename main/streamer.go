@@ -93,6 +93,7 @@ func main() {
 
 	if *side == "send" {
 		go clientRoutine(p)
+		go clientRoutine(p)
 	} else if *side == "recv" {
 		go serverRoutine(p)
 	} else {
