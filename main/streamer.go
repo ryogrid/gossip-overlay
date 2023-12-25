@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/pion/datachannel"
 	"github.com/ryogrid/gossip-overlay/core"
 	"github.com/ryogrid/gossip-overlay/overlay_setting"
 	"github.com/ryogrid/gossip-overlay/util"
@@ -109,30 +110,34 @@ func serverRoutine(p *core.Peer) {
 		panic(err)
 	}
 
-	channel, remotePeerName, streamID, err2 := oserv.Accept()
-	if err2 != nil {
-		panic(err2)
-	}
-	fmt.Println("accepted:", remotePeerName, streamID)
-
-	pongSeqNum := 0
 	for {
-		util.OverlayDebugPrintln("call ReadDataChannel!")
-		buff := make([]byte, 1024)
-		n1, _, err3 := channel.ReadDataChannel(buff)
-		if err3 != nil || n1 != 1 {
-			util.OverlayDebugPrintln("panic occured at ReadDataChannel!", err3, n1)
-			panic(err)
+		channel, remotePeerName, streamID, err2 := oserv.Accept()
+		if err2 != nil {
+			panic(err2)
 		}
-		fmt.Println("received:", buff[0])
+		fmt.Println("accepted:", remotePeerName, streamID)
 
-		util.OverlayDebugPrintln("call WriteDataChannel!")
-		n2, err4 := channel.WriteDataChannel([]byte{byte(pongSeqNum % 255), buff[0]}, false)
-		if err4 != nil || n2 != 2 {
-			panic(err4)
-		}
-		fmt.Println("sent:", pongSeqNum%255, buff[0])
-		pongSeqNum++
+		go func(channel_ *datachannel.DataChannel) {
+			pongSeqNum := 0
+			for {
+				util.OverlayDebugPrintln("call ReadDataChannel!")
+				buff := make([]byte, 1024)
+				n1, _, err3 := channel_.ReadDataChannel(buff)
+				if err3 != nil || n1 != 1 {
+					util.OverlayDebugPrintln("panic occured at ReadDataChannel!", err3, n1)
+					panic(err)
+				}
+				fmt.Println("received:", buff[0])
+
+				util.OverlayDebugPrintln("call WriteDataChannel!")
+				n2, err4 := channel_.WriteDataChannel([]byte{byte(pongSeqNum % 255), buff[0]}, false)
+				if err4 != nil || n2 != 2 {
+					panic(err4)
+				}
+				fmt.Println("sent:", pongSeqNum%255, buff[0])
+				pongSeqNum++
+			}
+		}(channel)
 	}
 }
 
