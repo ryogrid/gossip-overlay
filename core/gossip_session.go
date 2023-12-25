@@ -1,24 +1,23 @@
 package core
 
 import (
+	"errors"
 	"github.com/ryogrid/gossip-overlay/util"
-	"github.com/weaveworks/mesh"
 	"math"
 	"net"
-	"sync"
 	"time"
 )
 
 // represents a gossip session throuth remote Peer
 // implementation of net.Conn
 type GossipSession struct {
-	LocalAddress       *PeerAddress
-	RemoteAddresses    []*PeerAddress
-	RemoteAddressesMtx *sync.Mutex
-	SessMtx            sync.RWMutex
+	LocalAddress  *PeerAddress
+	RemoteAddress *PeerAddress
 	// buffered data is accessed through GossipDM each time
-	GossipDM    *GossipDataManager
-	SessionSide OperationSideAt
+	GossipDM          *GossipDataManager
+	LocalSessionSide  OperationSideAt
+	RemoteSessionSide OperationSideAt
+	StreamID          uint16
 }
 
 // GossipSetton implements net.Conn
@@ -29,15 +28,10 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	util.OverlayDebugPrintln("GossipSession.Read called")
 
 	var buf []byte
-	if oc.SessionSide == ServerSide {
-		buf = oc.GossipDM.Read(math.MaxUint64, ServerSide)
-	} else if oc.SessionSide == ClientSide {
-		oc.RemoteAddressesMtx.Lock()
-		peerName := oc.RemoteAddresses[0].PeerName
-		oc.RemoteAddressesMtx.Unlock()
-		buf = oc.GossipDM.Read(peerName, ClientSide)
-	} else {
-		panic("invalid SessionSide")
+	peerName := oc.RemoteAddress.PeerName
+	buf = oc.GossipDM.Read(peerName, oc.StreamID)
+	if buf == nil {
+		return 0, errors.New("session closed")
 	}
 	copy(b, buf)
 
@@ -48,41 +42,14 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 func (oc *GossipSession) Write(b []byte) (n int, err error) {
 	util.OverlayDebugPrintln("GossipSession.Write called", b)
 
-	if len(oc.RemoteAddresses) > 0 {
-		peerNames := make([]mesh.PeerName, 0)
-		oc.RemoteAddressesMtx.Lock()
-		for _, remoteAddr := range oc.RemoteAddresses {
-			peerNames = append(peerNames, remoteAddr.PeerName)
-		}
-		oc.RemoteAddressesMtx.Unlock()
-
-		// when client side, length of peerNames is 1, so send data to only one stream
-		// but when server side, length of peerNames is same as number of established streams
-		// server side sends same data to all streams (it is ridiculous...)
-		// because collect destination decidable design can't be implemented with mesh lib
-		// stream collectly must work even if send data to not collect destination
-		// by control of SCTP protocol layer...
-		for _, peerName := range peerNames {
-			oc.GossipDM.SendToRemote(peerName, oc.SessionSide, b)
-		}
-	} else {
-		// server side uses LastRecvPeer until Stream is established
-		// because remote peer name can't be known until then
-		oc.GossipDM.SendToRemote(oc.GossipDM.LastRecvPeer, oc.SessionSide, b)
-	}
+	oc.GossipDM.Peer.GossipMM.SendToRemote(oc.RemoteAddress.PeerName, oc.StreamID, oc.RemoteSessionSide, math.MaxUint64, b)
 
 	return len(b), nil
 }
 
 // Close closes the conn and releases any Read calls
 func (oc *GossipSession) Close() error {
-	oc.RemoteAddressesMtx.Lock()
-	peerNames := make([]mesh.PeerName, 0)
-	oc.RemoteAddressesMtx.Unlock()
-	for _, peerName := range peerNames {
-		oc.GossipDM.WhenClose(peerName)
-	}
-	oc.RemoteAddressesMtx.Unlock()
+	oc.GossipDM.Peer.GossipMM.WhenClose(oc.RemoteAddress.PeerName, oc.StreamID)
 
 	return nil
 }
@@ -97,10 +64,8 @@ func (oc *GossipSession) LocalAddr() net.Addr {
 
 func (oc *GossipSession) RemoteAddr() net.Addr {
 	util.OverlayDebugPrintln("GossipSession.RemoteAddr called")
-	oc.RemoteAddressesMtx.Lock()
-	defer oc.RemoteAddressesMtx.Unlock()
-	if len(oc.RemoteAddresses) > 0 {
-		return oc.RemoteAddresses[0]
+	if oc.RemoteAddress.PeerName != math.MaxUint64 {
+		return oc.RemoteAddress
 	}
 	return nil
 }

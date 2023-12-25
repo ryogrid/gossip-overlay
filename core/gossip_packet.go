@@ -6,10 +6,21 @@ import (
 	"github.com/weaveworks/mesh"
 )
 
-// type GossipPacket []byte
+type PacketKind uint8
+
+const (
+	PACKET_KIND_CTC_DATA PacketKind = iota
+	PACKET_KIND_CTC_CONTROL
+	PACKET_KIND_NOTIFY_PEER_INFO
+)
+
 type GossipPacket struct {
+	FromPeer     mesh.PeerName
 	Buf          []byte
 	ReceiverSide OperationSideAt
+	StreamID     uint16
+	SeqNum       uint64
+	PktKind      PacketKind
 }
 
 func (gp GossipPacket) Encode() [][]byte {

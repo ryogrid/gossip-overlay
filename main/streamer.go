@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/pion/datachannel"
 	"github.com/ryogrid/gossip-overlay/core"
 	"github.com/ryogrid/gossip-overlay/overlay_setting"
 	"github.com/ryogrid/gossip-overlay/util"
@@ -12,11 +13,16 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
 )
 
+/*
+.\streamer.exe -side recv -hwaddr 00:00:00:00:00:02 -nickname b -mesh :6002 -debug false | Tee-Object -FilePath ".\recv-1.txt"
+.\streamer.exe -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -destname 2 -peer 127.0.0.1:6002 -debug false | Tee-Object -FilePath ".\send-1.txt"
+*/
 func main() {
 	peers := &util.Stringset{}
 	var (
@@ -39,11 +45,11 @@ func main() {
 
 	host, portStr, err := net.SplitHostPort(*meshListen)
 	if err != nil {
-		logger.Fatalf("mesh address: %s: %v", *meshListen, err)
+		logger.Fatalf("mesh host: %s: %v", *meshListen, err)
 	}
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		logger.Fatalf("mesh address: %s: %v", *meshListen, err)
+		logger.Fatalf("mesh port: %d: %v", port, err)
 	}
 
 	meshConf := mesh.Config{
@@ -56,6 +62,7 @@ func main() {
 		TrustedSubnets:     []*net.IPNet{},
 	}
 
+	runtime.GOMAXPROCS(10)
 	name, err := mesh.PeerNameFromString(*hwaddr)
 	if err != nil {
 		logger.Fatalf("%s: %v", *hwaddr, err)
@@ -84,86 +91,90 @@ func main() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
-	if *side == "recv" {
-		serverRoutine(p)
-	} else if *side == "send" {
-		clientRoutine(p)
+	if *side == "send" {
+		go clientRoutine(p)
+		go clientRoutine(p)
+	} else if *side == "recv" {
+		go serverRoutine(p)
+	} else {
+		//panic("invalid side")
+		// do nothing (relay)
 	}
 
 	logger.Print(<-errs)
 }
 
 func serverRoutine(p *core.Peer) {
-	server, err := core.NewOverlayServer(p)
+	util.OverlayDebugPrintln("start serverRoutine")
+	oserv, err := core.NewOverlayServer(p, p.GossipMM)
 	if err != nil {
 		panic(err)
 	}
 
-	stream, remotePeer, err := server.Accept()
-	fmt.Println("stream accepted from ", remotePeer)
-	if err != nil {
-		panic(err)
-	}
-
-	var pongSeqNum = 100
 	for {
-		buff := make([]byte, 1024)
-		util.OverlayDebugPrintln("before stream.Read")
-		_, err = stream.Read(buff)
-		util.OverlayDebugPrintln("after stream.Read", err, buff)
-		if err != nil {
-			//log.Panic(err)
-			panic(err)
+		channel, remotePeerName, streamID, err2 := oserv.Accept()
+		if err2 != nil {
+			panic(err2)
 		}
-		fmt.Println("received:", buff[0])
+		fmt.Println("accepted:", remotePeerName, streamID)
 
-		sendBuf := []byte{byte(pongSeqNum % 255), buff[0]}
-		_, err = stream.Write(sendBuf)
-		if err != nil {
-			//log.Panic(err)
-			panic(err)
-		}
-		fmt.Println("sent:", sendBuf[0], sendBuf[1])
-		pongSeqNum++
+		go func(channel_ *datachannel.DataChannel) {
+			pongSeqNum := 0
+			for {
+				util.OverlayDebugPrintln("call ReadDataChannel!")
+				buff := make([]byte, 1024)
+				n1, _, err3 := channel_.ReadDataChannel(buff)
+				if err3 != nil || n1 != 1 {
+					util.OverlayDebugPrintln("panic occured at ReadDataChannel!", err3, n1)
+					panic(err)
+				}
+				fmt.Println("received:", buff[0])
 
-		time.Sleep(time.Second)
+				util.OverlayDebugPrintln("call WriteDataChannel!")
+				n2, err4 := channel_.WriteDataChannel([]byte{byte(pongSeqNum % 255), buff[0]}, false)
+				if err4 != nil || n2 != 2 {
+					panic(err4)
+				}
+				fmt.Println("sent:", pongSeqNum%255, buff[0])
+				pongSeqNum++
+			}
+		}(channel)
 	}
 }
 
 func clientRoutine(p *core.Peer) {
-	a, err := core.NewOverlayClient(p, p.Destname)
+	util.OverlayDebugPrintln("start clientRoutine")
+	oc, err := core.NewOverlayClient(p, p.Destname, p.GossipMM)
 	if err != nil {
 		panic(err)
 	}
 
-	stream, err2 := a.OpenStream()
+	channel, streamID, err2 := oc.OpenChannel(math.MaxUint16)
 	if err2 != nil {
 		panic(err2)
 	}
+	fmt.Println("opened:", streamID)
 
-	go func() {
-		var pingSeqNum int
-		for {
-			_, err = stream.Write([]byte{byte(pingSeqNum % 255)})
-			if err != nil {
-				//log.Panic(err)
-				panic(err)
-			}
-			fmt.Println("sent:", pingSeqNum%255)
-
-			pingSeqNum++
-
-			time.Sleep(3 * time.Second)
-		}
-	}()
-
+	pingSeqNum := 0
 	for {
+		util.OverlayDebugPrintln("call WriteDataChannel!")
+		n, err3 := channel.WriteDataChannel([]byte{byte(pingSeqNum % 255)}, false)
+		if err3 != nil || n != 1 {
+			util.OverlayDebugPrintln("panic occured at WriteDataChannel!", err3, n)
+			panic(err3)
+		}
+		fmt.Println("sent:", pingSeqNum%255)
+		pingSeqNum++
+
+		util.OverlayDebugPrintln("call ReadDataChannel!")
 		buff := make([]byte, 1024)
-		_, err = stream.Read(buff)
-		if err != nil {
-			//log.Panic(err)
+		n, _, err = channel.ReadDataChannel(buff)
+		if err != nil || n != 2 {
+			util.OverlayDebugPrintln("panic occured at ReadDataChannel!", err, n)
 			panic(err)
 		}
 		fmt.Println("received:", buff[0], buff[1])
+
+		time.Sleep(3 * time.Second)
 	}
 }
