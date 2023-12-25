@@ -1,9 +1,10 @@
-package core
+package gossip
 
 import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"github.com/ryogrid/gossip-overlay/core"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"sync"
@@ -34,7 +35,7 @@ type GossipDataManager struct {
 	// "mesh.PeerName" -> BufferWithMutex
 	bufs sync.Map
 	Self mesh.PeerName
-	Peer *Peer
+	Peer *core.Peer
 }
 
 // GossipPacket implements GossipData.
@@ -177,9 +178,9 @@ func (gdm *GossipDataManager) Merge(other mesh.GossipData) (complete mesh.Gossip
 
 func (gdm *GossipDataManager) NewGossipSessionForClientToClient(remotePeer mesh.PeerName, streamID uint16) (*GossipSession, error) {
 	ret := &GossipSession{
-		LocalAddress: &PeerAddress{gdm.Self},
+		LocalAddress: &core.PeerAddress{gdm.Self},
 		//RemoteAddress:      []*PeerAddress{&PeerAddress{remotePeer}},
-		RemoteAddress: &PeerAddress{remotePeer},
+		RemoteAddress: &core.PeerAddress{remotePeer},
 		//RemoteAddressesMtx: &sync.Mutex{},
 		//SessMtx:            sync.RWMutex{},
 		GossipDM:          gdm,

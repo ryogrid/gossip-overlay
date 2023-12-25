@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/pion/datachannel"
+	"github.com/ryogrid/gossip-overlay/gossip"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"sync"
@@ -20,10 +21,10 @@ type ClientInfo struct {
 type OverlayServer struct {
 	P                    *Peer
 	Info4OLChannelRecvCh chan *ClientInfo
-	GossipMM             *GossipMessageManager
+	GossipMM             *gossip.GossipMessageManager
 }
 
-func NewOverlayServer(p *Peer, gossipMM *GossipMessageManager) (*OverlayServer, error) {
+func NewOverlayServer(p *Peer, gossipMM *gossip.GossipMessageManager) (*OverlayServer, error) {
 	ret := &OverlayServer{
 		P:                    p,
 		Info4OLChannelRecvCh: nil,
@@ -49,7 +50,7 @@ func decodeUint16FromBytes(buf []byte) uint16 {
 }
 
 func (ols *OverlayServer) sendPongPktToClient(remotePeer mesh.PeerName, streamID uint16, seqNum uint64) error {
-	err := ols.GossipMM.SendToRemote(remotePeer, streamID, ClientSide, seqNum, []byte{})
+	err := ols.GossipMM.SendToRemote(remotePeer, streamID, gossip.ClientSide, seqNum, []byte{})
 	if err != nil {
 		//fmt.Println(err)
 		//return err
@@ -60,7 +61,7 @@ func (ols *OverlayServer) sendPongPktToClient(remotePeer mesh.PeerName, streamID
 
 // thread for handling client info notify packet of each client
 func (ols *OverlayServer) newHandshakeHandlingThServSide(remotePeer mesh.PeerName, streamID uint16,
-	recvPktCh <-chan *GossipPacket, finNotifyCh chan<- *ClientInfo, notifyErrCh chan<- *ClientInfo) {
+	recvPktCh <-chan *gossip.GossipPacket, finNotifyCh chan<- *ClientInfo, notifyErrCh chan<- *ClientInfo) {
 	pkt := <-recvPktCh
 	if pkt.SeqNum != 0 {
 		// exit thread as handshake failed
@@ -118,9 +119,9 @@ func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
 			// pass packet to appropriate handling thread (if not exist, spawn new handling thread)
 			key := pkt.FromPeer.String() + "-" + string(pkt.StreamID)
 			if ch, ok := handshakePktHandleThChans.Load(key); ok {
-				ch.(chan *GossipPacket) <- pkt
+				ch.(chan *gossip.GossipPacket) <- pkt
 			} else {
-				newCh := make(chan *GossipPacket, 1)
+				newCh := make(chan *gossip.GossipPacket, 1)
 
 				handshakePktHandleThChans.Store(key, newCh)
 				go ols.newHandshakeHandlingThServSide(pkt.FromPeer, pkt.StreamID, newCh, finCh, notifyErrCh)

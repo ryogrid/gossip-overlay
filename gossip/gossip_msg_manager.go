@@ -1,8 +1,9 @@
-package core
+package gossip
 
 import (
 	"errors"
 	"fmt"
+	"github.com/ryogrid/gossip-overlay/core"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"math"
@@ -11,7 +12,7 @@ import (
 )
 
 type GossipMessageManager struct {
-	LocalAddress *PeerAddress
+	LocalAddress *core.PeerAddress
 	GossipDM     *GossipDataManager
 	//// "<peer name>-<stream id" => channel to appropriate packet handling thread
 	PktHandlers sync.Map
@@ -21,7 +22,7 @@ type GossipMessageManager struct {
 	NotifyPktChForServerSide chan *GossipPacket
 }
 
-func NewGossipMessageManager(localAddress *PeerAddress, gossipDM *GossipDataManager) *GossipMessageManager {
+func NewGossipMessageManager(localAddress *core.PeerAddress, gossipDM *GossipDataManager) *GossipMessageManager {
 	actions := make(chan func())
 	ret := &GossipMessageManager{
 		LocalAddress:             localAddress,

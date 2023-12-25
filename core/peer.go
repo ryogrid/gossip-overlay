@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/ryogrid/gossip-overlay/gossip"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"io/ioutil"
@@ -12,8 +13,8 @@ import (
 // and the resulting Gossip registered in turn,
 // before calling mesh.Router.Start.
 type Peer struct {
-	GossipDataMan *GossipDataManager
-	GossipMM      *GossipMessageManager
+	GossipDataMan *gossip.GossipDataManager
+	GossipMM      *gossip.GossipMessageManager
 	Send          mesh.Gossip
 	Actions       chan<- func()
 	Quit          chan struct{}
@@ -36,10 +37,10 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, destname mesh.PeerName, nic
 	}
 
 	actions := make(chan func())
-	tmpDM := NewGossipDataManager(self)
+	tmpDM := gossip.NewGossipDataManager(self)
 	p := &Peer{
 		GossipDataMan: tmpDM,
-		GossipMM:      NewGossipMessageManager(&PeerAddress{self}, tmpDM),
+		GossipMM:      gossip.NewGossipMessageManager(&PeerAddress{self}, tmpDM),
 		Send:          nil, // must .RegisterGossipObj() later
 		Actions:       actions,
 		Quit:          make(chan struct{}),
@@ -90,14 +91,14 @@ func (p *Peer) Stop() {
 // Return a copy of our complete GossipDataManager.
 func (p *Peer) Gossip() (complete mesh.GossipData) {
 	util.OverlayDebugPrintln("Gossip called")
-	return GossipPacket{}
+	return gossip.GossipPacket{}
 }
 
 // Merge the gossiped data represented by buf into our GossipDataManager.
 // Return the GossipDataManager information that was modified.
 func (p *Peer) OnGossip(buf []byte) (delta mesh.GossipData, err error) {
 	util.OverlayDebugPrintln("OnGossip called")
-	return GossipPacket{}, nil
+	return gossip.GossipPacket{}, nil
 }
 
 // Merge the gossiped data represented by buf into our GossipDataManager.

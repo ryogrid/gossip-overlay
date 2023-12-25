@@ -7,6 +7,7 @@ import (
 	"github.com/pion/datachannel"
 	"github.com/pion/logging"
 	"github.com/pion/sctp"
+	"github.com/ryogrid/gossip-overlay/gossip"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"math"
@@ -18,10 +19,10 @@ import (
 type OverlayClient struct {
 	P              *Peer
 	RemotePeerName mesh.PeerName
-	GossipMM       *GossipMessageManager
+	GossipMM       *gossip.GossipMessageManager
 }
 
-func NewOverlayClient(p *Peer, remotePeer mesh.PeerName, gossipMM *GossipMessageManager) (*OverlayClient, error) {
+func NewOverlayClient(p *Peer, remotePeer mesh.PeerName, gossipMM *gossip.GossipMessageManager) (*OverlayClient, error) {
 	ret := &OverlayClient{
 		P:              p,
 		RemotePeerName: remotePeer,
@@ -99,14 +100,14 @@ func (oc *OverlayClient) NotifyOpenChReqToServer(streamId uint16) {
 	util.OverlayDebugPrintln("OverlayClient::NotifyOpenChReqToServer called", streamId)
 retry:
 	// 4way
-	err := oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, ServerSide, 60*time.Second, 0, []byte(oc.P.GossipDataMan.Self.String()))
+	err := oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, gossip.ServerSide, 60*time.Second, 0, []byte(oc.P.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
 		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)
 		goto retry
 	}
 	util.OverlayDebugPrintln("first GossipMessageManager.SendPingAndWaitPong call returned")
-	err = oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, ServerSide, 60*time.Second, 1, []byte(oc.P.GossipDataMan.Self.String()))
+	err = oc.GossipMM.SendPingAndWaitPong(oc.RemotePeerName, streamId, gossip.ServerSide, 60*time.Second, 1, []byte(oc.P.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
 		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)

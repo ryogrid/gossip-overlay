@@ -1,7 +1,8 @@
-package core
+package gossip
 
 import (
 	"errors"
+	"github.com/ryogrid/gossip-overlay/core"
 	"github.com/ryogrid/gossip-overlay/util"
 	"math"
 	"net"
@@ -11,8 +12,8 @@ import (
 // represents a gossip session throuth remote Peer
 // implementation of net.Conn
 type GossipSession struct {
-	LocalAddress  *PeerAddress
-	RemoteAddress *PeerAddress
+	LocalAddress  *core.PeerAddress
+	RemoteAddress *core.PeerAddress
 	// buffered data is accessed through GossipDM each time
 	GossipDM          *GossipDataManager
 	LocalSessionSide  OperationSideAt
