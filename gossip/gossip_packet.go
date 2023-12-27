@@ -16,11 +16,11 @@ const (
 
 type GossipPacket struct {
 	FromPeer     mesh.PeerName
-	buf          []byte
-	receiverSide OperationSideAt
+	ReceiverSide OperationSideAt
 	StreamID     uint16
 	SeqNum       uint64
-	pktKind      PacketKind
+	PktKind      PacketKind
+	Buf          []byte
 }
 
 func (gp GossipPacket) Encode() [][]byte {
@@ -34,10 +34,10 @@ func (gp GossipPacket) Encode() [][]byte {
 
 func (gp GossipPacket) Merge(other mesh.GossipData) (complete mesh.GossipData) {
 	retBuf := make([]byte, 0)
-	retBuf = append(retBuf, gp.buf...)
-	retBuf = append(retBuf, other.(GossipPacket).buf...)
+	retBuf = append(retBuf, gp.Buf...)
+	retBuf = append(retBuf, other.(GossipPacket).Buf...)
 
-	gp.buf = retBuf
+	gp.Buf = retBuf
 	return gp
 }
 

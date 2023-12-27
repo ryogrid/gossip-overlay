@@ -93,20 +93,20 @@ func (p *Peer) Gossip() (complete mesh.GossipData) {
 	return GossipPacket{}
 }
 
-// Merge the gossiped data represented by buf into our GossipDataManager.
+// Merge the gossiped data represented by Buf into our GossipDataManager.
 // Return the GossipDataManager information that was modified.
 func (p *Peer) OnGossip(buf []byte) (delta mesh.GossipData, err error) {
 	util.OverlayDebugPrintln("OnGossip called")
 	return GossipPacket{}, nil
 }
 
-// Merge the gossiped data represented by buf into our GossipDataManager.
+// Merge the gossiped data represented by Buf into our GossipDataManager.
 // Return the GossipDataManager information that was modified.
 func (p *Peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.GossipData, err error) {
 	panic("OnGossipBroadcast can not be called now")
 }
 
-// Merge the gossiped data represented by buf into our GossipDataManager.
+// Merge the gossiped data represented by Buf into our GossipDataManager.
 func (p *Peer) OnGossipUnicast(src mesh.PeerName, buf []byte) error {
 	util.OverlayDebugPrintln("OnGossipUnicast called")
 	return p.GossipMM.onPacketReceived(src, buf)

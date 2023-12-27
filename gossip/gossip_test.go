@@ -18,6 +18,6 @@ func TestSerializeDeserialize(t *testing.T) {
 		panic(err)
 	}
 	fmt.Println(gp2)
-	fmt.Println(gp2.buf)
-	fmt.Println(gp2.receiverSide)
+	fmt.Println(gp2.Buf)
+	fmt.Println(gp2.ReceiverSide)
 }

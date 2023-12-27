@@ -97,7 +97,7 @@ func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (res
 	//		if storedBuf, ok := gdm.loadBuffer(fromPeer, streamID, opSide); ok {
 	//			// wait unitl data received
 	//			//storedBuf.Mtx.Lock()
-	//			if len(storedBuf.buf) > 0 {
+	//			if len(storedBuf.Buf) > 0 {
 	//				// end waiting
 	//				//storedBuf.Mtx.Unlock()
 	//				break
@@ -113,8 +113,8 @@ func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (res
 	//	}
 	//
 	//	storedBuf, _ := gdm.loadBuffer(fromPeer, streamID, opSide)
-	//	copiedBuf = append(copiedBuf, storedBuf.buf...)
-	//	storedBuf.buf = make([]byte, 0)
+	//	copiedBuf = append(copiedBuf, storedBuf.Buf...)
+	//	storedBuf.Buf = make([]byte, 0)
 	//	gdm.storeBuffer(fromPeer, streamID, opSide, storedBuf)
 	//}
 	//val.ReadMtx.Unlock()

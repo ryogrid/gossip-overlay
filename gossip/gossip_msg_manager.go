@@ -72,11 +72,11 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 			}
 			sendObj := GossipPacket{
 				FromPeer:     gmm.localAddress.PeerName,
-				buf:          data,
-				receiverSide: recvOpSide,
+				Buf:          data,
+				ReceiverSide: recvOpSide,
 				StreamID:     streamID,
 				SeqNum:       seqNum,
-				pktKind:      pktKind,
+				PktKind:      pktKind,
 			}
 			encodedData := sendObj.Encode()[0]
 			util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: encodedData:", encodedData)
@@ -153,14 +153,15 @@ func (gmm *GossipMessageManager) onPacketReceived(src mesh.PeerName, buf []byte)
 	if err != nil {
 		panic(err)
 	}
-	util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID, " buf:", buf)
+	util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID, " Buf:", buf)
+	util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. gp:", *gp)
 
-	if gp.pktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.receiverSide == ServerSide {
+	if gp.PktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.ReceiverSide == ServerSide {
 		util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived: notify packet received and passed to root handler (ServerSide)")
 		gmm.NotifyPktChForServerSide <- gp
 		util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived: send to root handler finished (ServerSide)")
 		return nil
-	} else if gp.pktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.receiverSide == ClientSide {
+	} else if gp.PktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.ReceiverSide == ClientSide {
 		util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived: notify packet received and passed to each handler (ClientSide)")
 		destCh, ok := gmm.pktHandlers.Load(gp.FromPeer.String() + "-" + string(gp.StreamID))
 		if ok {
@@ -172,7 +173,7 @@ func (gmm *GossipMessageManager) onPacketReceived(src mesh.PeerName, buf []byte)
 	}
 
 	// when packat is of CtoC stream
-	err2 := gmm.gossipDM.write(gp.FromPeer, gp.StreamID, gp.buf)
+	err2 := gmm.gossipDM.write(gp.FromPeer, gp.StreamID, gp.Buf)
 	if err2 != nil {
 		panic(err2)
 	}
