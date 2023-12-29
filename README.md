@@ -1,14 +1,14 @@
 # gossip-overlay
 ## Feature
-- Bi-directional reliable stream I/F which hides peers on gossip protcol layer with SCTP can be used
+- Bi-directional reliable stream I/F which hides peers on gossip protcol layer with SCTP
 - Any centralized server is not needed
 - TCP socket programming style interface (system architecture like a server and clients can be implemented) 
 - Machines on network having NAT can join
 
-## Build
+## Build (sample program)
 $ go build main/streamer.go
 
-## Usage (preview of current implemented feature)
+## Usage
 Message Ping Pong between 2 peers through one intermediate peer  
 
 Start several peers on the same host.  
@@ -26,7 +26,7 @@ Network Topology:
 
 https://github.com/ryogrid/gossip-overlay/assets/24614/176837aa-bcdf-414a-a864-5feb63eab3a1
 
-## Use Case
+## Use Cases
 - Port forwarding tool
   - [gossip-port-forward](https://github.com/ryogrid/gossip-port-forward)
 - DHT based datastore
