@@ -58,7 +58,7 @@ func (oc *OverlayClient) establishCtoCStreamInner(streamID uint16) (*sctp.Associ
 	return a, nil
 }
 
-func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.DataChannel, error) {
+func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, error) {
 	a, _ := oc.establishCtoCStreamInner(streamID)
 
 	util.OverlayDebugPrintln("opened a stream for client to client", streamID)
@@ -79,7 +79,8 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*datachannel.Data
 
 	util.OverlayDebugPrintln("established a OverlayStream")
 
-	return dc, nil
+	//return dc, nil
+	return NewOverlayStream(dc, a), nil
 }
 
 func (oc *OverlayClient) NotifyOpenChReqToServer(streamId uint16) {
@@ -102,7 +103,7 @@ retry:
 	util.OverlayDebugPrintln("second GossipMessageManager.SendPingAndWaitPong call returned")
 }
 
-func (oc *OverlayClient) OpenChannel(streamId uint16) (*datachannel.DataChannel, uint16, error) {
+func (oc *OverlayClient) OpenChannel(streamId uint16) (*OverlayStream, uint16, error) {
 	streamId_ := uint16(0)
 	if streamId != math.MaxUint16 {
 		streamId_ = streamId

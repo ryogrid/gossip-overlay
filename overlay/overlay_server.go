@@ -2,7 +2,6 @@ package overlay
 
 import (
 	"fmt"
-	"github.com/pion/datachannel"
 	"github.com/ryogrid/gossip-overlay/gossip"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
@@ -137,7 +136,7 @@ func (ols *OverlayServer) InitClientInfoNotifyPktRootHandlerTh() error {
 	return nil
 }
 
-func (ols *OverlayServer) Accept() (*datachannel.DataChannel, mesh.PeerName, uint16, error) {
+func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, uint16, error) {
 	clInfo := <-ols.info4OLChannelRecvCh
 	fmt.Println(clInfo)
 	olc, err := NewOverlayClient(ols.peer, clInfo.remotePeerName, ols.gossipMM)
@@ -145,12 +144,12 @@ func (ols *OverlayServer) Accept() (*datachannel.DataChannel, mesh.PeerName, uin
 		panic(err)
 	}
 
-	dc, _, err2 := olc.OpenChannel(clInfo.streamID)
+	os, _, err2 := olc.OpenChannel(clInfo.streamID)
 	if err2 != nil {
 		panic(err2)
 	}
 
-	return dc, clInfo.remotePeerName, clInfo.streamID, nil
+	return os, clInfo.remotePeerName, clInfo.streamID, nil
 }
 
 func (ols *OverlayServer) Close() error {
