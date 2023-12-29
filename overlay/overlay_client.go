@@ -86,14 +86,14 @@ func (oc *OverlayClient) NotifyOpenChReqToServer(streamId uint16) {
 	util.OverlayDebugPrintln("OverlayClient::NotifyOpenChReqToServer called", streamId)
 retry:
 	// 4way
-	err := oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 60*time.Second, 0, []byte(oc.peer.GossipDataMan.Self.String()))
+	err := oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 30*time.Second, 0, []byte(oc.peer.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
 		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)
 		goto retry
 	}
 	util.OverlayDebugPrintln("first GossipMessageManager.SendPingAndWaitPong call returned")
-	err = oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 60*time.Second, 1, []byte(oc.peer.GossipDataMan.Self.String()))
+	err = oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 30*time.Second, 1, []byte(oc.peer.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
 		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)

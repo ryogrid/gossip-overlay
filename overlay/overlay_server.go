@@ -59,8 +59,9 @@ func (ols *OverlayServer) newHandshakeHandlingThServSide(remotePeer mesh.PeerNam
 
 	done := make(chan interface{})
 
+	// 30 seconds timeout
 	go func() {
-		time.Sleep(10 * time.Second)
+		time.Sleep(30 * time.Second)
 		close(done)
 	}()
 
@@ -80,7 +81,9 @@ loop:
 				return
 			}
 		case <-done:
-			// exit thread without sending client info
+			// timeout reached
+			// exit thread as handshake failed
+			notifyErrCh <- &clientInfo{remotePeer, streamID}
 			return
 		}
 	}
