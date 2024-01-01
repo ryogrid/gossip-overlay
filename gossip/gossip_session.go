@@ -17,6 +17,7 @@ type GossipSession struct {
 	gossipDM          *GossipDataManager
 	remoteSessionSide OperationSideAt
 	StreamID          uint16
+	IsActive          bool
 }
 
 // GossipSetton implements net.Conn
@@ -25,6 +26,11 @@ var _ net.Conn = &GossipSession{}
 // Read
 func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	util.OverlayDebugPrintln("GossipSession.read called")
+
+	if !oc.IsActive {
+		// this session is deactivated according to result of heartbeat check
+		return -1, errors.New("remote peer is inactive")
+	}
 
 	var buf []byte
 	peerName := oc.remoteAddress.PeerName
@@ -40,6 +46,11 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 // Write writes len(p) bytes from p to the DTLS connection
 func (oc *GossipSession) Write(b []byte) (n int, err error) {
 	util.OverlayDebugPrintln("GossipSession.write called", b)
+
+	if !oc.IsActive {
+		// this session is deactivated according to result of heartbeat check
+		return -1, errors.New("remote peer is inactive")
+	}
 
 	oc.gossipDM.peer.GossipMM.SendToRemote(oc.remoteAddress.PeerName, oc.StreamID, oc.remoteSessionSide, math.MaxUint64, b)
 

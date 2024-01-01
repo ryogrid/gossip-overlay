@@ -4,15 +4,18 @@ import (
 	"context"
 	"github.com/pion/datachannel"
 	"github.com/pion/sctp"
+	"github.com/ryogrid/gossip-overlay/gossip"
 )
 
 type OverlayStream struct {
 	channel *datachannel.DataChannel
+	oc      *OverlayClient
 	assoc   *sctp.Association
+	gsess   *gossip.GossipSession
 }
 
-func NewOverlayStream(channel *datachannel.DataChannel, assoc *sctp.Association) *OverlayStream {
-	return &OverlayStream{channel, assoc}
+func NewOverlayStream(channel *datachannel.DataChannel, oc *OverlayClient, assoc *sctp.Association, gsess *gossip.GossipSession) *OverlayStream {
+	return &OverlayStream{channel, oc, assoc, gsess}
 }
 
 func (os *OverlayStream) Read(p []byte) (n int, err error) {

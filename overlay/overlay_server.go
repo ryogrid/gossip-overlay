@@ -34,16 +34,6 @@ func NewOverlayServer(p *gossip.Peer, gossipMM *gossip.GossipMessageManager) (*O
 	return ret, nil
 }
 
-func (ols *OverlayServer) sendPongPktToClient(remotePeer mesh.PeerName, streamID uint16, seqNum uint64) error {
-	err := ols.gossipMM.SendToRemote(remotePeer, streamID, gossip.ClientSide, seqNum, []byte{})
-	if err != nil {
-		//fmt.Println(err)
-		//return err
-		panic(err)
-	}
-	return nil
-}
-
 // thread for handling client info notify packet of each client
 func (ols *OverlayServer) newHandshakeHandlingThServSide(remotePeer mesh.PeerName, streamID uint16,
 	recvPktCh <-chan *gossip.GossipPacket, finNotifyCh chan<- *clientInfo, notifyErrCh chan<- *clientInfo) {
@@ -54,7 +44,7 @@ func (ols *OverlayServer) newHandshakeHandlingThServSide(remotePeer mesh.PeerNam
 		return
 	}
 	util.OverlayDebugPrintln(pkt)
-	ols.sendPongPktToClient(remotePeer, streamID, 0)
+	ols.gossipMM.SendPongPktToClient(remotePeer, streamID, 0)
 
 	done := make(chan interface{})
 
@@ -86,7 +76,7 @@ loop:
 			return
 		}
 	}
-	ols.sendPongPktToClient(remotePeer, streamID, 1)
+	ols.gossipMM.SendPongPktToClient(remotePeer, streamID, 1)
 
 	finNotifyCh <- &clientInfo{remotePeer, streamID}
 }

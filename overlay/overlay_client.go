@@ -6,6 +6,7 @@ import (
 	"github.com/pion/logging"
 	"github.com/pion/sctp"
 	"github.com/ryogrid/gossip-overlay/gossip"
+	"github.com/ryogrid/gossip-overlay/overlay_setting"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"math"
@@ -15,16 +16,18 @@ import (
 
 // wrapper of sctp.Client
 type OverlayClient struct {
-	peer           *gossip.Peer
-	remotePeerName mesh.PeerName
-	gossipMM       *gossip.GossipMessageManager
+	peer            *gossip.Peer
+	remotePeerName  mesh.PeerName
+	gossipMM        *gossip.GossipMessageManager
+	HertbeatThFinCh *chan bool
 }
 
 func NewOverlayClient(p *gossip.Peer, remotePeer mesh.PeerName, gossipMM *gossip.GossipMessageManager) (*OverlayClient, error) {
 	ret := &OverlayClient{
-		peer:           p,
-		remotePeerName: remotePeer,
-		gossipMM:       gossipMM,
+		peer:            p,
+		remotePeerName:  remotePeer,
+		gossipMM:        gossipMM,
+		HertbeatThFinCh: nil,
 	}
 
 	return ret, nil
@@ -37,11 +40,11 @@ func genRandomStreamId() uint16 {
 	return uint16(randGen.Uint32())
 }
 
-func (oc *OverlayClient) establishCtoCStreamInner(streamID uint16) (*sctp.Association, error) {
-	conn, err := oc.peer.GossipDataMan.NewGossipSessionForClientToClient(oc.remotePeerName, streamID)
+func (oc *OverlayClient) establishCtoCStreamInner(streamID uint16) (*sctp.Association, *gossip.GossipSession, error) {
+	conn, err := oc.peer.GossipMM.NewGossipSessionForClientToClient(oc.remotePeerName, streamID)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return nil, nil, err
 	}
 	util.OverlayDebugPrintln("dialed gossip session for client to client", streamID, conn.StreamID)
 
@@ -52,14 +55,14 @@ func (oc *OverlayClient) establishCtoCStreamInner(streamID uint16) (*sctp.Associ
 	a, err2 := sctp.Client(config)
 	if err2 != nil {
 		fmt.Println(err2)
-		return nil, err2
+		return nil, nil, err2
 	}
 
-	return a, nil
+	return a, conn, nil
 }
 
 func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, error) {
-	a, _ := oc.establishCtoCStreamInner(streamID)
+	a, gsess, _ := oc.establishCtoCStreamInner(streamID)
 
 	util.OverlayDebugPrintln("opened a stream for client to client", streamID)
 
@@ -80,7 +83,7 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 	util.OverlayDebugPrintln("established a OverlayStream")
 
 	//return dc, nil
-	return NewOverlayStream(dc, a), nil
+	return NewOverlayStream(dc, oc, a, gsess), nil
 }
 
 func (oc *OverlayClient) NotifyOpenChReqToServer(streamId uint16) {
@@ -125,9 +128,50 @@ func (oc *OverlayClient) OpenChannel(streamId uint16) (*OverlayStream, uint16, e
 
 	util.OverlayDebugPrintln("end of OverlayClient::OpenChannel")
 
+	// start heartbeat thread
+	tmpCh := make(chan bool)
+	oc.HertbeatThFinCh = &tmpCh
+	go oc.heaertbeatSendingTh(overlayStream.gsess)
+
 	return overlayStream, streamId_, nil
 }
 
+func (oc *OverlayClient) heaertbeatSendingTh(gsess *gossip.GossipSession) {
+	t := time.NewTicker(overlay_setting.HEARTBEAT_INTERVAL * time.Second) // interval
+loop:
+	for {
+		select {
+		case <-t.C: // interval reached
+			// send heartbeat packet
+			failCnt := 0
+			err := oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, 0, gossip.ServerSide, 30*time.Second, math.MaxUint32, []byte{})
+			if err != nil {
+				failCnt++
+				util.OverlayDebugPrintln("call GossipMessageManager::SendPingAndWaitPong on heartbeatSendingTh: failCnt is incremented to ", failCnt)
+			}
+			err = oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, 0, gossip.ServerSide, 30*time.Second, math.MaxUint32, []byte{})
+			if err != nil {
+				failCnt++
+				util.OverlayDebugPrintln("call GossipMessageManager::SendPingAndWaitPong on heartbeatSendingTh: failCnt is incremented to ", failCnt)
+			}
+			if failCnt == 2 {
+				// connection lost
+				// end heartbeat thread
+				// and deactivate gossip session
+				gsess.IsActive = false
+				break loop
+			} else {
+				// connection alive
+				// and do nothing
+			}
+		case <-*oc.HertbeatThFinCh:
+			break loop
+		}
+	}
+	t.Stop()
+}
+
 func (oc *OverlayClient) Destroy() error {
+	close(*oc.HertbeatThFinCh)
 	return nil
 }

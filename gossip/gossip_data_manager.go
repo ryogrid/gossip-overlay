@@ -174,21 +174,3 @@ func (gdm *GossipDataManager) Encode() [][]byte {
 func (gdm *GossipDataManager) Merge(other mesh.GossipData) (complete mesh.GossipData) {
 	return other
 }
-
-func (gdm *GossipDataManager) NewGossipSessionForClientToClient(remotePeer mesh.PeerName, streamID uint16) (*GossipSession, error) {
-	ret := &GossipSession{
-		localAddress: &PeerAddress{gdm.Self},
-		//remoteAddress:      []*PeerAddress{&PeerAddress{remotePeer}},
-		remoteAddress: &PeerAddress{remotePeer},
-		//RemoteAddressesMtx: &sync.Mutex{},
-		//SessMtx:            sync.RWMutex{},
-		gossipDM:          gdm,
-		remoteSessionSide: ClientSide,
-		StreamID:          streamID,
-	}
-	if _, ok := gdm.loadBuffer(remotePeer, streamID); !ok {
-		gdm.storeBuffer(remotePeer, streamID, NewBufferWithMutex(make([]byte, 0)))
-	}
-
-	return ret, nil
-}

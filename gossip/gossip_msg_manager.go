@@ -69,7 +69,10 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 			pktKind := PACKET_KIND_NOTIFY_PEER_INFO
 			if seqNum == math.MaxUint64 {
 				pktKind = PACKET_KIND_CTC_DATA
+			} else if seqNum == math.MaxUint32 {
+				pktKind = PACKET_KIND_CTC_HEARTBEAT
 			}
+
 			sendObj := GossipPacket{
 				FromPeer:     gmm.localAddress.PeerName,
 				Buf:          data,
@@ -142,9 +145,28 @@ func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamI
 			}
 		}
 	}()
-	gmm.gossipDM.bufs.Delete(dest.String() + "-" + string(streamID))
+	//gmm.gossipDM.bufs.Delete(dest.String() + "-" + string(streamID))
 	<-c
 	return ret
+}
+
+// if seqNum is math.MaxUint32, it means that this packet is for heartbeat
+// if seqNum is other, it means that this packet is for notification of information for CtoC stream establishment (4way handshake)
+func (gmm *GossipMessageManager) SendPongPktToClient(remotePeer mesh.PeerName, streamID uint16, seqNum uint64) error {
+	err := gmm.SendToRemote(remotePeer, streamID, ClientSide, seqNum, []byte{})
+	if err != nil {
+		//fmt.Println(err)
+		//return err
+		panic(err)
+	}
+	return nil
+}
+
+func (gmm *GossipMessageManager) handleKeepAlivePkt(remotePeer mesh.PeerName, streamID uint16, pkt *GossipPacket) {
+	util.OverlayDebugPrintln("GossipMessageManager.handleKeepAlivePkt called. remotePeer:", remotePeer, " streamID:", streamID, " pkt:", pkt)
+	util.OverlayDebugPrintln(pkt)
+
+	gmm.SendPongPktToClient(remotePeer, streamID, 0)
 }
 
 // called when any packet received (even if packat is of SCTP CtoC stream)
@@ -170,6 +192,9 @@ func (gmm *GossipMessageManager) onPacketReceived(src mesh.PeerName, buf []byte)
 		} else {
 			panic("illigal internal state!")
 		}
+	} else if gp.PktKind == PACKET_KIND_CTC_HEARTBEAT && gp.ReceiverSide == ClientSide { // heartbeat
+		util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived: heartbeat packet received and passed to each handler (ClientSide)")
+		go gmm.handleKeepAlivePkt(gp.FromPeer, gp.StreamID, gp)
 	}
 
 	// when packat is of CtoC stream
@@ -186,4 +211,23 @@ func (gmm *GossipMessageManager) whenClose(remotePeer mesh.PeerName, streamID ui
 	gmm.gossipDM.removeBuffer(remotePeer, streamID)
 
 	return nil
+}
+
+func (gmm *GossipMessageManager) NewGossipSessionForClientToClient(remotePeer mesh.PeerName, streamID uint16) (*GossipSession, error) {
+	ret := &GossipSession{
+		localAddress: &PeerAddress{gmm.gossipDM.Self},
+		//remoteAddress:      []*PeerAddress{&PeerAddress{remotePeer}},
+		remoteAddress: &PeerAddress{remotePeer},
+		//RemoteAddressesMtx: &sync.Mutex{},
+		//SessMtx:            sync.RWMutex{},
+		gossipDM:          gmm.gossipDM,
+		remoteSessionSide: ClientSide,
+		StreamID:          streamID,
+		IsActive:          true,
+	}
+	if _, ok := gmm.gossipDM.loadBuffer(remotePeer, streamID); !ok {
+		gmm.gossipDM.storeBuffer(remotePeer, streamID, NewBufferWithMutex(make([]byte, 0)))
+	}
+
+	return ret, nil
 }
