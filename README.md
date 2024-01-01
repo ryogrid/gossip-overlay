@@ -27,9 +27,9 @@ Network Topology:
 https://github.com/ryogrid/gossip-overlay/assets/24614/176837aa-bcdf-414a-a864-5feb63eab3a1
 
 ## Use Cases
-- Port forwarding tool
+- Port forwarding tool between private networks
   - [gossip-port-forward](https://github.com/ryogrid/gossip-port-forward)
-- DHT based distributed KVS
+- DHT based distributed KVS which runs on overlay
   - IN PROGRESS
 
 ## TODO
