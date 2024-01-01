@@ -29,7 +29,7 @@ https://github.com/ryogrid/gossip-overlay/assets/24614/176837aa-bcdf-414a-a864-5
 ## Use Cases
 - Port forwarding tool
   - [gossip-port-forward](https://github.com/ryogrid/gossip-port-forward)
-- DHT based datastore
+- DHT based distributed KVS
   - IN PROGRESS
 
 ## TODO
