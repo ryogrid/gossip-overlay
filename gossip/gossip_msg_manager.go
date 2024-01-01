@@ -121,7 +121,7 @@ func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamI
 		if gmm.gossipDM.peer.send != nil {
 			recvPktCh = make(chan *GossipPacket)
 			gmm.registerChToHandlerTh(dest, streamID, recvPktCh)
-			gmm.gossipDM.bufs.Store(dest.String()+"-"+string(streamID), make([]byte, 0))
+			//gmm.gossipDM.bufs.Store(dest.String()+"-"+string(streamID), make([]byte, 0))
 			gmm.SendToRemote(dest, streamID, recvOpSide, seqNum, data)
 		} else {
 			panic("no sender configured; not broadcasting update right now")
