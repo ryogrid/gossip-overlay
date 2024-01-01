@@ -75,7 +75,7 @@ func (gdm *GossipDataManager) removeBuffer(peerName mesh.PeerName, streamID uint
 }
 
 func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (result []byte) {
-	//util.OverlayDebugPrintln("GossipDataManager.read called: start. fromPeer:", fromPeer, " streamID:", streamID)
+	util.OverlayDebugPrintln("GossipDataManager.read called: start. fromPeer:", fromPeer, " streamID:", streamID)
 
 	var copiedBuf = make([]byte, 0)
 	val, ok2 := gdm.loadBuffer(fromPeer, streamID)
@@ -120,7 +120,7 @@ func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (res
 	//val.ReadMtx.Unlock()
 	//util.OverlayDebugPrintln("GossipDataManager.read called: after checking length of retBase loop.")
 
-	//util.OverlayDebugPrintln("GossipDataManager.read called: end. fromPeer:", fromPeer, " streamID", streamID, " copiedBuf:", copiedBuf)
+	util.OverlayDebugPrintln("GossipDataManager.read called: end. fromPeer:", fromPeer, " streamID", streamID, " copiedBuf:", copiedBuf)
 	return copiedBuf
 }
 

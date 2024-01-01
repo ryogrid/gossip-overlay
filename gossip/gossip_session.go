@@ -25,7 +25,7 @@ var _ net.Conn = &GossipSession{}
 
 // Read
 func (oc *GossipSession) Read(b []byte) (n int, err error) {
-	//util.OverlayDebugPrintln("GossipSession.read called")
+	util.OverlayDebugPrintln("GossipSession.read called")
 
 	if !oc.IsActive {
 		// this session is deactivated according to result of heartbeat check
@@ -48,7 +48,6 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 	util.OverlayDebugPrintln("GossipSession.write called", b)
 
 	if !oc.IsActive {
-		panic("not implemented")
 		// this session is deactivated according to result of heartbeat check
 		return -1, errors.New("remote peer is inactive")
 	}
