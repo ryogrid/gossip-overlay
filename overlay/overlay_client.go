@@ -144,16 +144,17 @@ loop:
 		case <-t.C: // interval reached
 			// send heartbeat packet
 			failCnt := 0
-			err := oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, 0, gossip.ServerSide, 30*time.Second, math.MaxUint32, []byte{})
+			err := oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, 0, gossip.ClientSide, 30*time.Second, math.MaxUint32, []byte{})
 			if err != nil {
 				failCnt++
 				util.OverlayDebugPrintln("call GossipMessageManager::SendPingAndWaitPong on heartbeatSendingTh: failCnt is incremented to ", failCnt)
 			}
-			err = oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, 0, gossip.ServerSide, 30*time.Second, math.MaxUint32, []byte{})
+			err = oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, 0, gossip.ClientSide, 30*time.Second, math.MaxUint32, []byte{})
 			if err != nil {
 				failCnt++
 				util.OverlayDebugPrintln("call GossipMessageManager::SendPingAndWaitPong on heartbeatSendingTh: failCnt is incremented to ", failCnt)
 			}
+			util.OverlayDebugPrintln("call GossipMessageManager::SendPingAndWaitPong on heartbeatSendingTh: failCnt is ", failCnt)
 			if failCnt == 2 {
 				// connection lost
 				// end heartbeat thread

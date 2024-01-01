@@ -62,6 +62,7 @@ func (gmm *GossipMessageManager) unregisterChToHandlerTh(dest mesh.PeerName, str
 
 func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, seqNum uint64, data []byte) error {
 	util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
+	var ret error = nil
 	c := make(chan struct{})
 	gmm.actions <- func() {
 		defer close(c)
@@ -88,10 +89,15 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 				if err == nil {
 					break
 				} else {
-					// TODO: need to implement timeout
-					util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: err:", err)
-					util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: 1sec wait and do retry")
-					time.Sleep(1 * time.Second)
+					if pktKind == PACKET_KIND_CTC_HEARTBEAT {
+						ret = err
+						break
+					} else {
+						// TODO: need to implement timeout
+						util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: err:", err)
+						util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: 1sec wait and do retry")
+						time.Sleep(1 * time.Second)
+					}
 				}
 			}
 		} else {
@@ -100,7 +106,7 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 	}
 	<-c
 
-	return nil
+	return ret
 }
 
 // use at notification of information for CtoC stream establishment (4way handshake)
@@ -125,7 +131,11 @@ func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamI
 			recvPktCh = make(chan *GossipPacket)
 			gmm.registerChToHandlerTh(dest, streamID, recvPktCh)
 			//gmm.gossipDM.bufs.Store(dest.String()+"-"+string(streamID), make([]byte, 0))
-			gmm.SendToRemote(dest, streamID, recvOpSide, seqNum, data)
+			err := gmm.SendToRemote(dest, streamID, recvOpSide, seqNum, data)
+			if err != nil {
+				ret = errors.New("remote peer becomes not available")
+				return
+			}
 		} else {
 			panic("no sender configured; not broadcasting update right now")
 		}
@@ -193,7 +203,7 @@ func (gmm *GossipMessageManager) onPacketReceived(src mesh.PeerName, buf []byte)
 			panic("illigal internal state!")
 		}
 	} else if gp.PktKind == PACKET_KIND_CTC_HEARTBEAT && gp.ReceiverSide == ClientSide { // heartbeat
-		util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived: heartbeat packet received and passed to each handler (ClientSide)")
+		util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived: heartbeat packet received")
 		go gmm.handleKeepAlivePkt(gp.FromPeer, gp.StreamID, gp)
 	}
 
