@@ -23,7 +23,7 @@ type GossipSession struct {
 // GossipSetton implements net.Conn
 var _ net.Conn = &GossipSession{}
 
-// Read
+// Read reads data from the remote peer through gossip layer (in fact, from local buffer)
 func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	util.OverlayDebugPrintln("GossipSession.read called")
 
@@ -43,7 +43,7 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 	return len(buf), nil
 }
 
-// Write writes len(p) bytes from p to the DTLS connection
+// Write sends len(p) bytes from p to the remote peer through gossip layer
 func (oc *GossipSession) Write(b []byte) (n int, err error) {
 	util.OverlayDebugPrintln("GossipSession.write called", b)
 
