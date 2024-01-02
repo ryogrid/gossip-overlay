@@ -31,6 +31,7 @@ https://github.com/ryogrid/gossip-overlay/assets/24614/176837aa-bcdf-414a-a864-5
   - [gossip-port-forward](https://github.com/ryogrid/gossip-port-forward)
 - DHT based distributed KVS which runs on overlay
   - IN PROGRESS
+    - [gord-overlay](https://github.com/ryogrid/gord-overlay)
 
 ## TODO
 - [gist (in Japanese)](https://gist.github.com/ryogrid/e78088bc531bc62c10eba1c0d0e0b7fc)
