@@ -104,7 +104,7 @@ func main() {
 	logger.Print(<-errs)
 }
 
-func serverRoutine(p *gossip.Peer) {
+func serverRoutine(p *gossip.GossipPeer) {
 	util.OverlayDebugPrintln("start serverRoutine")
 	oserv, err := overlay.NewOverlayServer(p, p.GossipMM)
 	if err != nil {
@@ -142,7 +142,7 @@ func serverRoutine(p *gossip.Peer) {
 	}
 }
 
-func clientRoutine(p *gossip.Peer) {
+func clientRoutine(p *gossip.GossipPeer) {
 	util.OverlayDebugPrintln("start clientRoutine")
 	oc, err := overlay.NewOverlayClient(p, p.Destname, p.GossipMM)
 	if err != nil {

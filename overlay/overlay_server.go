@@ -16,12 +16,12 @@ type clientInfo struct {
 
 // wrapper of sctp.Server
 type OverlayServer struct {
-	peer                 *gossip.Peer
+	peer                 *gossip.GossipPeer
 	info4OLChannelRecvCh chan *clientInfo
 	gossipMM             *gossip.GossipMessageManager
 }
 
-func NewOverlayServer(p *gossip.Peer, gossipMM *gossip.GossipMessageManager) (*OverlayServer, error) {
+func NewOverlayServer(p *gossip.GossipPeer, gossipMM *gossip.GossipMessageManager) (*OverlayServer, error) {
 	ret := &OverlayServer{
 		peer:                 p,
 		info4OLChannelRecvCh: nil,
