@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/mesh.iml" filepath="$PROJECT_DIR$/.idea/mesh.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/gossip-overlay.iml" filepath="$PROJECT_DIR$/.idea/gossip-overlay.iml" />
     </modules>
   </component>
 </project>
