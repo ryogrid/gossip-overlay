@@ -21,30 +21,30 @@ func NewOverlayStream(channel *datachannel.DataChannel, oc *OverlayClient, assoc
 }
 
 func (os *OverlayStream) LocalAddr() net.Addr {
-	//TODO: Need to implement (OverlayStream.LocalAddr)
-	panic("implement me")
+	return &gossip.PeerAddress{
+		PeerName: os.oc.peer.GossipDataMan.Self,
+	}
 }
 
 func (os *OverlayStream) RemoteAddr() net.Addr {
-	//TODO: Need to implement (OverlayStream.RemoteAddr)
-
-	panic("implement me")
+	return &gossip.PeerAddress{
+		os.oc.remotePeerName,
+	}
 }
 
 func (os *OverlayStream) SetDeadline(t time.Time) error {
-	//TODO: Need to implement (OverlayStream.SetDeadline)
-	panic("implement me")
+	// do nothing
+	return nil
 }
 
 func (os *OverlayStream) SetReadDeadline(t time.Time) error {
-	//TODO: Need to implement (OverlayStream.SetReadDeadline)
-
-	panic("implement me")
+	// do nothing
+	return nil
 }
 
 func (os *OverlayStream) SetWriteDeadline(t time.Time) error {
-	//TODO: Need to implement (OverlayStream.SetWriteDeadline)
-	panic("implement me")
+	// do nothing
+	return nil
 }
 
 func (os *OverlayStream) Read(p []byte) (n int, err error) {
