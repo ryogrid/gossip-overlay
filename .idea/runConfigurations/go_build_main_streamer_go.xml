@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="go build main/streamer.go" type="GoApplicationRunConfiguration" factoryName="Go Application">
-    <module name="mesh" />
+    <module name="gossip-overlay" />
     <working_directory value="$PROJECT_DIR$" />
     <kind value="FILE" />
     <package value="github.com/ryogrid/gossip-overlay" />
