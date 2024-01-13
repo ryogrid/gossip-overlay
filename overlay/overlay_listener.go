@@ -2,12 +2,12 @@ package overlay
 
 import "net"
 
+type OverlayListener struct {
+}
+
 func NewOverlayListener(ol *OverlayPeer) net.Listener {
 	// TODO: need to implement (private_server.go::getGossipListener)
 	return &OverlayListener{}
-}
-
-type OverlayListener struct {
 }
 
 // Accept waits for and returns the next connection to the listener.
