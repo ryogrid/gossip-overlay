@@ -9,7 +9,7 @@ import (
 	"math"
 	"net"
 	"os"
-	"time"
+	"strconv"
 )
 
 var LoggerObj *log.Logger
@@ -18,13 +18,13 @@ type OverlayPeer struct {
 	Peer *gossip.GossipPeer
 }
 
-func NewNode(destPeerId *uint64, gossipListenPort uint16) (*OverlayPeer, error) {
+func NewOverlayPeer(host *string, gossipListenPort uint16, peers *util.Stringset) (*OverlayPeer, error) {
 	//nicAddr := util.MustHardwareAddr()
 	//name, err := mesh.PeerNameFromString(nicAddr)
 	//if err != nil {
 	//	panic("Failed to get PeerName from NIC address")
 	//}
-	name := mesh.PeerName(time.Now().Unix())
+	name := mesh.PeerName(util.NewHashIDUint64(*host + ":" + strconv.Itoa(int(gossipListenPort))))
 
 	meshConf := mesh.Config{
 		Host:               "0.0.0.0",
@@ -39,13 +39,13 @@ func NewNode(destPeerId *uint64, gossipListenPort uint16) (*OverlayPeer, error) 
 	LoggerObj = log.New(os.Stderr, "gossip> ", log.LstdFlags)
 	emptyStr := ""
 	meshListen := "local"
-	var destPeerId_ uint64 = math.MaxUint64
-	if destPeerId != nil {
-		destPeerId_ = *destPeerId
-	}
-	peers := &util.Stringset{}
-	peers.Set(constants.BootstrapPeer)
-	p := gossip.NewPeer(name, LoggerObj, mesh.PeerName(destPeerId_), &emptyStr, &emptyStr, &meshListen, &meshConf, peers)
+	//var destPeerId_ uint64 = math.MaxUint64
+	//if destPeerId != nil {
+	//	destPeerId_ = *destPeerId
+	//}
+	//peers := &util.Stringset{}
+	//peers.Set(constants.BootstrapPeer)
+	p := gossip.NewPeer(name, LoggerObj, &emptyStr, &emptyStr, &meshListen, &meshConf, peers)
 
 	return &OverlayPeer{p}, nil
 }

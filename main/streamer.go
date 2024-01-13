@@ -76,7 +76,7 @@ func main() {
 		}
 	}
 
-	p := gossip.NewPeer(name, logger, mesh.PeerName(destNameNum), nickname, channel, meshListen, &meshConf, peers)
+	p := gossip.NewPeer(name, logger, nickname, channel, meshListen, &meshConf, peers)
 
 	defer func() {
 		logger.Printf("mesh router stopping")
@@ -92,8 +92,8 @@ func main() {
 	}()
 
 	if *side == "send" {
-		go clientRoutine(p)
-		go clientRoutine(p)
+		go clientRoutine(p, mesh.PeerName(destNameNum))
+		go clientRoutine(p, mesh.PeerName(destNameNum))
 	} else if *side == "recv" {
 		go serverRoutine(p)
 	} else {
@@ -142,9 +142,9 @@ func serverRoutine(p *gossip.GossipPeer) {
 	}
 }
 
-func clientRoutine(p *gossip.GossipPeer) {
+func clientRoutine(p *gossip.GossipPeer, destName mesh.PeerName) {
 	util.OverlayDebugPrintln("start clientRoutine")
-	oc, err := overlay.NewOverlayClient(p, p.Destname, p.GossipMM)
+	oc, err := overlay.NewOverlayClient(p, destName, p.GossipMM)
 	if err != nil {
 		panic(err)
 	}

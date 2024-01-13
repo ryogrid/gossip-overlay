@@ -1,6 +1,9 @@
 package util
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"github.com/ryogrid/gossip-overlay/overlay_setting"
 	"net"
@@ -54,4 +57,12 @@ func OverlayDebugPrintln(a ...interface{}) {
 	if overlay_setting.OVERLAY_DEBUG {
 		fmt.Println(a)
 	}
+}
+
+func NewHashIDUint64(key string) uint64 {
+	hf := sha256.New()
+	hf.Write([]byte(key))
+	var ret uint64
+	binary.Read(bytes.NewBuffer(hf.Sum(nil)[0:7]), binary.LittleEndian, &ret)
+	return ret
 }

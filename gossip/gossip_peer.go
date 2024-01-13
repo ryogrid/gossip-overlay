@@ -18,8 +18,8 @@ type GossipPeer struct {
 	actions       chan<- func()
 	quit          chan struct{}
 	logger        *log.Logger
-	Destname      mesh.PeerName
-	Router        *mesh.Router
+	//Destname      mesh.PeerName
+	Router *mesh.Router
 }
 
 // GossipPeer implements mesh.Gossiper.
@@ -28,7 +28,7 @@ var _ mesh.Gossiper = &GossipPeer{}
 // Construct a GossipPeer with empty GossipDataManager.
 // Be sure to registerGossipObj a channel, later,
 // so we can make outbound communication.
-func NewPeer(self mesh.PeerName, logger *log.Logger, destname mesh.PeerName, nickname *string, channel *string, meshListen *string, meshConf *mesh.Config, peers *util.Stringset) *GossipPeer {
+func NewPeer(self mesh.PeerName, logger *log.Logger, nickname *string, channel *string, meshListen *string, meshConf *mesh.Config, peers *util.Stringset) *GossipPeer {
 	router, err := mesh.NewRouter(*meshConf, self, *nickname, mesh.NullOverlay{}, log.New(ioutil.Discard, "", 0))
 
 	if err != nil {
@@ -44,8 +44,8 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, destname mesh.PeerName, nic
 		actions:       actions,
 		quit:          make(chan struct{}),
 		logger:        logger,
-		Destname:      destname,
-		Router:        router,
+		//Destname:      destname,
+		Router: router,
 	}
 	p.GossipDataMan.peer = p
 
