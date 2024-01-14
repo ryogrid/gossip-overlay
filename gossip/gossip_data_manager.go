@@ -34,7 +34,7 @@ type GossipDataManager struct {
 	// "mesh.PeerName" -> BufferWithMutex
 	bufs sync.Map
 	Self mesh.PeerName
-	peer *Peer
+	peer *GossipPeer
 }
 
 // GossipPacket implements GossipData.

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// represents a gossip session throuth remote Peer
+// represents a gossip session throuth remote GossipPeer
 // implementation of net.Conn
 type GossipSession struct {
 	localAddress  *PeerAddress

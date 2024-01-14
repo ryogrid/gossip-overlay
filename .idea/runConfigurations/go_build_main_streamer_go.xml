@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go build main/streamer.go" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="gossip-overlay" />
+    <working_directory value="$PROJECT_DIR$" />
+    <kind value="FILE" />
+    <package value="github.com/ryogrid/gossip-overlay" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/main/streamer.go" />
+    <option name="run" value="false" />
+    <method v="2" />
+  </configuration>
+</component>

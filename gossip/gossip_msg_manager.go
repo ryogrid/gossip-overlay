@@ -64,7 +64,8 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 	util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
 	var ret error = nil
 	c := make(chan struct{})
-	gmm.actions <- func() {
+	//gmm.actions <- func() {
+	go func() {
 		defer close(c)
 		if gmm.gossipDM.peer.send != nil {
 			pktKind := PACKET_KIND_NOTIFY_PEER_INFO
@@ -103,7 +104,7 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 		} else {
 			gmm.gossipDM.peer.logger.Printf("no sender configured; not broadcasting update right now")
 		}
-	}
+	}()
 	<-c
 
 	return ret

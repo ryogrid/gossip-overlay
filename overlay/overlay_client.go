@@ -16,13 +16,13 @@ import (
 
 // wrapper of sctp.Client
 type OverlayClient struct {
-	peer            *gossip.Peer
+	peer            *gossip.GossipPeer
 	remotePeerName  mesh.PeerName
 	gossipMM        *gossip.GossipMessageManager
 	HertbeatThFinCh *chan bool
 }
 
-func NewOverlayClient(p *gossip.Peer, remotePeer mesh.PeerName, gossipMM *gossip.GossipMessageManager) (*OverlayClient, error) {
+func NewOverlayClient(p *gossip.GossipPeer, remotePeer mesh.PeerName, gossipMM *gossip.GossipMessageManager) (*OverlayClient, error) {
 	ret := &OverlayClient{
 		peer:            p,
 		remotePeerName:  remotePeer,
