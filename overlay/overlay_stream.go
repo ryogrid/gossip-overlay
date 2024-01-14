@@ -59,5 +59,6 @@ func (os *OverlayStream) Write(p []byte) (n int, err error) {
 func (os *OverlayStream) Close() error {
 	os.channel.Close()
 	ctx := context.Background()
+	os.oc.Destroy()
 	return os.assoc.Shutdown(ctx)
 }
