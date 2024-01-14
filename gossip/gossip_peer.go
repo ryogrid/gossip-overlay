@@ -59,7 +59,7 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, nickname *string, channel *
 	p.registerGossipObj(gossip)
 
 	go func() {
-		logger.Printf("mesh router starting (%d)", &self)
+		logger.Printf("mesh router starting (%d)", self)
 		router.Start()
 	}()
 
