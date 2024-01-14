@@ -33,8 +33,7 @@ func NewOverlayPeer(host *string, gossipListenPort uint16, peers *util.Stringset
 
 	LoggerObj = log.New(os.Stderr, "gossip> ", log.LstdFlags)
 	emptyStr := ""
-	meshListen := "local"
-	p := gossip.NewPeer(name, LoggerObj, &emptyStr, &emptyStr, &meshListen, &meshConf, peers)
+	p := gossip.NewPeer(name, LoggerObj, &emptyStr, &emptyStr, &meshConf, peers)
 
 	return &OverlayPeer{p}, nil
 }

@@ -76,7 +76,7 @@ func main() {
 		}
 	}
 
-	p := gossip.NewPeer(name, logger, nickname, channel, meshListen, &meshConf, peers)
+	p := gossip.NewPeer(name, logger, nickname, channel, &meshConf, peers)
 
 	defer func() {
 		logger.Printf("mesh router stopping")
