@@ -89,14 +89,14 @@ func (p *GossipPeer) Stop() {
 
 // Return a copy of our complete GossipDataManager.
 func (p *GossipPeer) Gossip() (complete mesh.GossipData) {
-	util.OverlayDebugPrintln("Gossip called")
+	//util.OverlayDebugPrintln("Gossip called")
 	return GossipPacket{}
 }
 
 // Merge the gossiped data represented by Buf into our GossipDataManager.
 // Return the GossipDataManager information that was modified.
 func (p *GossipPeer) OnGossip(buf []byte) (delta mesh.GossipData, err error) {
-	util.OverlayDebugPrintln("OnGossip called")
+	//util.OverlayDebugPrintln("OnGossip called")
 	return GossipPacket{}, nil
 }
 

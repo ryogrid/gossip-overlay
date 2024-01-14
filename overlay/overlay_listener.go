@@ -1,6 +1,7 @@
 package overlay
 
 import (
+	"fmt"
 	"github.com/ryogrid/gossip-overlay/gossip"
 	"net"
 )
@@ -24,7 +25,9 @@ func NewOverlayListener(ol *OverlayPeer) net.Listener {
 
 // Accept waits for and returns the next connection to the listener.
 func (ol *OverlayListener) Accept() (net.Conn, error) {
+	fmt.Println("OverlayListener::Accept called", fmt.Sprintf("%d", ol.overlayServer.peer.GossipDataMan.Self))
 	channel, _, _, err := ol.overlayServer.Accept()
+	fmt.Println("OverlayListener::Accept fin", fmt.Sprintf("%v", err))
 	return channel, err
 }
 
@@ -33,11 +36,14 @@ func (ol *OverlayListener) Accept() (net.Conn, error) {
 func (ol *OverlayListener) Close() error {
 	// TODO: need to implement (OverlayListener::Close)
 	// do nothing now
+
+	fmt.Println("OverlayLister::Close called")
 	return nil
 }
 
 // Addr returns the listener's network address.
 func (ol *OverlayListener) Addr() net.Addr {
+	fmt.Println("OverlayListener::Addr called")
 	return &gossip.PeerAddress{
 		PeerName: ol.overlayPeer.Peer.GossipDataMan.Self,
 	}

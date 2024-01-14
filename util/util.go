@@ -66,3 +66,12 @@ func NewHashIDUint64(key string) uint64 {
 	//return ret
 	return binary.LittleEndian.Uint64(hf.Sum(nil))
 }
+
+func NewHashIDUint16(key string) uint16 {
+	hf := sha256.New()
+	hf.Write([]byte(key))
+	//var ret uint64
+	//binary.Read(bytes.NewBuffer(hf.Sum(nil)[0:7]), binary.LittleEndian, &ret)
+	//return ret
+	return binary.LittleEndian.Uint16(hf.Sum(nil))
+}

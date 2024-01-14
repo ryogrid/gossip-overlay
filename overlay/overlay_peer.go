@@ -18,12 +18,13 @@ type OverlayPeer struct {
 	Peer *gossip.GossipPeer
 }
 
-func NewOverlayPeer(host *string, gossipListenPort uint16, peers *util.Stringset) (*OverlayPeer, error) {
-	name := mesh.PeerName(util.NewHashIDUint64(*host + ":" + strconv.Itoa(int(gossipListenPort))))
+func NewOverlayPeer(host *string, gossipListenPort int, peers *util.Stringset) (*OverlayPeer, error) {
+	//name := mesh.PeerName(util.NewHashIDUint64(*host + ":" + strconv.Itoa(int(gossipListenPort))))
+	name := mesh.PeerName(util.NewHashIDUint16(*host + ":" + strconv.Itoa(int(gossipListenPort))))
 
 	meshConf := mesh.Config{
 		Host:               "0.0.0.0",
-		Port:               int(gossipListenPort),
+		Port:               gossipListenPort,
 		ProtocolMinVersion: mesh.ProtocolMaxVersion,
 		Password:           nil,
 		ConnLimit:          64,
@@ -34,6 +35,7 @@ func NewOverlayPeer(host *string, gossipListenPort uint16, peers *util.Stringset
 	LoggerObj = log.New(os.Stderr, "gossip> ", log.LstdFlags)
 	emptyStr := ""
 	p := gossip.NewPeer(name, LoggerObj, &emptyStr, &emptyStr, &meshConf, peers)
+	fmt.Println("NewOverlayPeer: peers=", peers.Slice())
 
 	return &OverlayPeer{p}, nil
 }
