@@ -7,6 +7,7 @@ import (
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"sync"
+	"time"
 )
 
 type OperationSideAt int
@@ -90,35 +91,35 @@ func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (res
 	val.Buf = make([]byte, 0)
 	val.Mtx.Unlock()
 
-	//val.ReadMtx.Lock()
-	//util.OverlayDebugPrintln("GossipDataManager.read called: before checking length of retBase loop.")
-	//if len(copiedBuf) == 0 {
-	//	for {
-	//		if storedBuf, ok := gdm.loadBuffer(fromPeer, streamID, opSide); ok {
-	//			// wait unitl data received
-	//			//storedBuf.Mtx.Lock()
-	//			if len(storedBuf.Buf) > 0 {
-	//				// end waiting
-	//				//storedBuf.Mtx.Unlock()
-	//				break
-	//			}
-	//			//storedBuf.Mtx.Unlock()
-	//			time.Sleep(1 * time.Millisecond)
-	//		} else {
-	//			util.OverlayDebugPrintln("GossipDataManager.read: waiting end because GossipSession should closed.")
-	//			val.ReadMtx.Unlock()
-	//			//return make([]byte, 0)
-	//			return nil
-	//		}
-	//	}
-	//
-	//	storedBuf, _ := gdm.loadBuffer(fromPeer, streamID, opSide)
-	//	copiedBuf = append(copiedBuf, storedBuf.Buf...)
-	//	storedBuf.Buf = make([]byte, 0)
-	//	gdm.storeBuffer(fromPeer, streamID, opSide, storedBuf)
-	//}
-	//val.ReadMtx.Unlock()
-	//util.OverlayDebugPrintln("GossipDataManager.read called: after checking length of retBase loop.")
+	val.ReadMtx.Lock()
+	util.OverlayDebugPrintln("GossipDataManager.read called: before checking length of retBase loop.")
+	if len(copiedBuf) == 0 {
+		for {
+			if storedBuf, ok := gdm.loadBuffer(fromPeer, streamID); ok {
+				// wait unitl data received
+				//storedBuf.Mtx.Lock()
+				if len(storedBuf.Buf) > 0 {
+					// end waiting
+					//storedBuf.Mtx.Unlock()
+					break
+				}
+				//storedBuf.Mtx.Unlock()
+				time.Sleep(1 * time.Millisecond)
+			} else {
+				util.OverlayDebugPrintln("GossipDataManager.read: waiting end because GossipSession should closed.")
+				val.ReadMtx.Unlock()
+				//return make([]byte, 0)
+				return nil
+			}
+		}
+
+		storedBuf, _ := gdm.loadBuffer(fromPeer, streamID)
+		copiedBuf = append(copiedBuf, storedBuf.Buf...)
+		storedBuf.Buf = make([]byte, 0)
+		gdm.storeBuffer(fromPeer, streamID, storedBuf)
+	}
+	val.ReadMtx.Unlock()
+	util.OverlayDebugPrintln("GossipDataManager.read called: after checking length of retBase loop.")
 
 	util.OverlayDebugPrintln("GossipDataManager.read called: end. fromPeer:", fromPeer, " streamID", streamID, " copiedBuf:", copiedBuf)
 	return copiedBuf

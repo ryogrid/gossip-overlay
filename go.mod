@@ -7,4 +7,5 @@ require (
 	github.com/pion/logging v0.2.2
 	github.com/pion/sctp v1.8.9
 	github.com/weaveworks/mesh v0.0.0-20191105120815-58dbcc3e8e63
+	golang.org/x/sys v0.14.0 // indirect
 )
