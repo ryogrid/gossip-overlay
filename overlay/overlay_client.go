@@ -75,7 +75,8 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 		LoggerFactory:        loggerFactory,
 	}
 
-	dc, err := datachannel.Dial(a, 100, cfg)
+	//dc, err := datachannel.Dial(a, 100, cfg)
+	dc, err := datachannel.Dial(a, streamID, cfg)
 	if err != nil {
 		panic(err)
 	}
