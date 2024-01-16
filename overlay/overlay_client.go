@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+var retryCntExceededErr = fmt.Errorf("retryCnt exceeded")
+
 // wrapper of sctp.Client
 type OverlayClient struct {
 	peer            *gossip.GossipPeer
@@ -87,24 +89,32 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 	return NewOverlayStream(dc, oc, a, gsess), nil
 }
 
-func (oc *OverlayClient) NotifyOpenChReqToServer(streamId uint16) {
+func (oc *OverlayClient) NotifyOpenChReqToServer(streamId uint16) error {
 	util.OverlayDebugPrintln("OverlayClient::NotifyOpenChReqToServer called", streamId)
+	retryCnt := 0
 retry:
+	if retryCnt > 1 {
+		fmt.Println(retryCntExceededErr)
+		return retryCntExceededErr
+	}
 	// 4way
-	err := oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 30*time.Second, 0, []byte(oc.peer.GossipDataMan.Self.String()))
+	err := oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 5*time.Second, 0, []byte(oc.peer.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
 		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)
+		retryCnt++
 		goto retry
 	}
 	util.OverlayDebugPrintln("first GossipMessageManager.SendPingAndWaitPong call returned")
-	err = oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 30*time.Second, 1, []byte(oc.peer.GossipDataMan.Self.String()))
+	err = oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 5*time.Second, 1, []byte(oc.peer.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
 		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)
+		retryCnt++
 		goto retry
 	}
 	util.OverlayDebugPrintln("second GossipMessageManager.SendPingAndWaitPong call returned")
+	return nil
 }
 
 func (oc *OverlayClient) OpenChannel(streamId uint16) (*OverlayStream, uint16, error) {
@@ -117,7 +127,11 @@ func (oc *OverlayClient) OpenChannel(streamId uint16) (*OverlayStream, uint16, e
 
 	if streamId == math.MaxUint16 {
 		// when client side initialization
-		oc.NotifyOpenChReqToServer(streamId_)
+		err := oc.NotifyOpenChReqToServer(streamId_)
+		if err != nil {
+			fmt.Println(err)
+			return nil, math.MaxUint16, err
+		}
 	}
 
 	overlayStream, err := oc.establishCtoCStream(streamId_)
@@ -132,7 +146,7 @@ func (oc *OverlayClient) OpenChannel(streamId uint16) (*OverlayStream, uint16, e
 	// start heartbeat thread
 	tmpCh := make(chan bool)
 	oc.HertbeatThFinCh = &tmpCh
-	go oc.heaertbeatSendingTh(overlayStream.gsess)
+	//go oc.heaertbeatSendingTh(overlayStream.gsess)
 
 	return overlayStream, streamId_, nil
 }

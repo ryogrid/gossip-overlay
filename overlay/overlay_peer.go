@@ -50,7 +50,7 @@ func (olPeer *OverlayPeer) OpenStreamToTargetPeer(peerId mesh.PeerName) net.Conn
 
 	channel, streamID, err2 := oc.OpenChannel(math.MaxUint16)
 	if err2 != nil {
-		panic(err2)
+		return nil
 	}
 	fmt.Println(fmt.Sprintf("opened: %d", streamID))
 

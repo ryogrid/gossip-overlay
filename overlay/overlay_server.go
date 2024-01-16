@@ -5,6 +5,7 @@ import (
 	"github.com/ryogrid/gossip-overlay/gossip"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
+	"math"
 	"sync"
 	"time"
 )
@@ -136,7 +137,7 @@ func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, uint16, error
 
 	os, _, err2 := olc.OpenChannel(clInfo.streamID)
 	if err2 != nil {
-		panic(err2)
+		return nil, math.MaxUint64, clInfo.streamID, err2
 	}
 
 	return os, clInfo.remotePeerName, clInfo.streamID, nil
