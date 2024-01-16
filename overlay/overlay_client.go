@@ -72,7 +72,7 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 
 	cfg := &datachannel.Config{
 		ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
-		ReliabilityParameter: 0,
+		ReliabilityParameter: 5,
 		Label:                "data",
 		LoggerFactory:        loggerFactory,
 	}
@@ -97,7 +97,7 @@ retry:
 		fmt.Println(retryCntExceededErr)
 		return retryCntExceededErr
 	}
-	// 4way
+	// 2way
 	err := oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 5*time.Second, 0, []byte(oc.peer.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
@@ -106,14 +106,14 @@ retry:
 		goto retry
 	}
 	util.OverlayDebugPrintln("first GossipMessageManager.SendPingAndWaitPong call returned")
-	err = oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 5*time.Second, 1, []byte(oc.peer.GossipDataMan.Self.String()))
-	if err != nil {
-		// timeout
-		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)
-		retryCnt++
-		goto retry
-	}
-	util.OverlayDebugPrintln("second GossipMessageManager.SendPingAndWaitPong call returned")
+	//err = oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 5*time.Second, 1, []byte(oc.peer.GossipDataMan.Self.String()))
+	//if err != nil {
+	//	// timeout
+	//	util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)
+	//	retryCnt++
+	//	goto retry
+	//}
+	//util.OverlayDebugPrintln("second GossipMessageManager.SendPingAndWaitPong call returned")
 	return nil
 }
 

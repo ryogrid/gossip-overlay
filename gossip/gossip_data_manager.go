@@ -18,16 +18,16 @@ const (
 )
 
 type BufferWithMutex struct {
-	Buf     []byte
-	Mtx     *sync.Mutex
-	ReadMtx *sync.Mutex
+	Buf []byte
+	Mtx *sync.Mutex
+	//ReadMtx *sync.Mutex
 }
 
 func NewBufferWithMutex(buf []byte) *BufferWithMutex {
 	return &BufferWithMutex{
-		Buf:     buf,
-		Mtx:     &sync.Mutex{}, // used by write / read operation
-		ReadMtx: &sync.Mutex{}, // used by read operation only
+		Buf: buf,
+		Mtx: &sync.Mutex{}, // used by write / read operation
+		//ReadMtx: &sync.Mutex{}, // used by read operation only
 	}
 }
 
@@ -76,7 +76,7 @@ func (gdm *GossipDataManager) removeBuffer(peerName mesh.PeerName, streamID uint
 }
 
 func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (result []byte) {
-	util.OverlayDebugPrintln("GossipDataManager.read called: start. fromPeer:", fromPeer, " streamID:", streamID)
+	//util.OverlayDebugPrintln("GossipDataManager.read called: start. fromPeer:", fromPeer, " streamID:", streamID)
 
 	var copiedBuf = make([]byte, 0)
 	val, ok2 := gdm.loadBuffer(fromPeer, streamID)
@@ -92,7 +92,7 @@ func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (res
 	val.Mtx.Unlock()
 
 	//val.ReadMtx.Lock()
-	util.OverlayDebugPrintln("GossipDataManager.read called: before checking length of retBase loop.")
+	//util.OverlayDebugPrintln("GossipDataManager.read called: before checking length of retBase loop.")
 	if len(copiedBuf) == 0 {
 		time.Sleep(1 * time.Millisecond)
 		//for {
@@ -124,14 +124,15 @@ func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (res
 		}
 	}
 	//val.ReadMtx.Unlock()
-	util.OverlayDebugPrintln("GossipDataManager.read called: after checking length of retBase loop.")
+	//util.OverlayDebugPrintln("GossipDataManager.read called: after checking length of retBase loop.")
 
-	util.OverlayDebugPrintln("GossipDataManager.read called: end. fromPeer:", fromPeer, " streamID", streamID, " copiedBuf:", copiedBuf)
+	//util.OverlayDebugPrintln("GossipDataManager.read called: end. fromPeer:", fromPeer, " streamID", streamID, " copiedBuf:", copiedBuf)
 	return copiedBuf
 }
 
 func (gdm *GossipDataManager) write(fromPeer mesh.PeerName, streamID uint16, data []byte) error {
-	util.OverlayDebugPrintln("GossipDataManager.write called. fromPeer:", fromPeer, " streamID", streamID, " data:", data)
+	//util.OverlayDebugPrintln("GossipDataManager.write called. fromPeer:", fromPeer, " streamID", streamID, " data:", data)
+	util.OverlayDebugPrintln("GossipDataManager.write called. fromPeer:", fromPeer, " streamID", streamID)
 
 	var stBuf []byte
 	var stBufMtx *sync.Mutex

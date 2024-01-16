@@ -6,7 +6,6 @@ import (
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"math"
-	"sync"
 	"time"
 )
 
@@ -86,9 +85,9 @@ func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
 	util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: start")
 
 	// "peer name"-"stream id" -> channel to appropriate packet handling thread
-	handshakePktHandleThChans := sync.Map{}
-	finCh := make(chan *clientInfo, 1)
-	notifyErrCh := make(chan *clientInfo, 1)
+	//handshakePktHandleThChans := sync.Map{}
+	//finCh := make(chan *clientInfo, 1)
+	//notifyErrCh := make(chan *clientInfo, 1)
 
 	for {
 		util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: waiting pkt")
@@ -96,24 +95,26 @@ func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
 		case pkt := <-ols.gossipMM.NotifyPktChForServerSide:
 			util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: received pkt:", pkt)
 			// pass packet to appropriate handling thread (if not exist, spawn new handling thread)
-			key := pkt.FromPeer.String() + "-" + string(pkt.StreamID)
-			if ch, ok := handshakePktHandleThChans.Load(key); ok {
-				ch.(chan *gossip.GossipPacket) <- pkt
-			} else {
-				newCh := make(chan *gossip.GossipPacket, 1)
-
-				handshakePktHandleThChans.Store(key, newCh)
-				go ols.newHandshakeHandlingThServSide(pkt.FromPeer, pkt.StreamID, newCh, finCh, notifyErrCh)
-				newCh <- pkt
-			}
-		case finInfo := <-finCh:
-			// remove channel to notify origin thread
-			handshakePktHandleThChans.Delete(finInfo.remotePeerName.String() + "-" + string(finInfo.streamID))
-			// notify new request info to Accept method
-			ols.info4OLChannelRecvCh <- finInfo
-		case errRemote := <-notifyErrCh:
-			// handshake failed
-			handshakePktHandleThChans.Delete(errRemote.remotePeerName.String() + "-" + string(errRemote.streamID))
+			//key := pkt.FromPeer.String() + "-" + string(pkt.StreamID)
+			//if ch, ok := handshakePktHandleThChans.Load(key); ok {
+			//	ch.(chan *gossip.GossipPacket) <- pkt
+			//} else {
+			//	newCh := make(chan *gossip.GossipPacket, 1)
+			//
+			//	handshakePktHandleThChans.Store(key, newCh)
+			//	go ols.newHandshakeHandlingThServSide(pkt.FromPeer, pkt.StreamID, newCh, finCh, notifyErrCh)
+			//	newCh <- pkt
+			//}
+			ols.gossipMM.SendPongPktToClient(pkt.FromPeer, pkt.StreamID, 0)
+			ols.info4OLChannelRecvCh <- &clientInfo{pkt.FromPeer, pkt.StreamID}
+			//case finInfo := <-finCh:
+			//	// remove channel to notify origin thread
+			//	handshakePktHandleThChans.Delete(finInfo.remotePeerName.String() + "-" + string(finInfo.streamID))
+			//	// notify new request info to Accept method
+			//	ols.info4OLChannelRecvCh <- finInfo
+			//case errRemote := <-notifyErrCh:
+			//	// handshake failed
+			//	handshakePktHandleThChans.Delete(errRemote.remotePeerName.String() + "-" + string(errRemote.streamID))
 		}
 	}
 	util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: end")

@@ -61,7 +61,8 @@ func (gmm *GossipMessageManager) unregisterChToHandlerTh(dest mesh.PeerName, str
 }
 
 func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, seqNum uint64, data []byte) error {
-	util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
+	//util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
+	util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID)
 	var ret error = nil
 	c := make(chan struct{})
 	//gmm.actions <- func() {
@@ -84,7 +85,7 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 				PktKind:      pktKind,
 			}
 			encodedData := sendObj.Encode()[0]
-			util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: encodedData:", encodedData)
+			//util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: encodedData:", encodedData)
 			for {
 				err := gmm.gossipDM.peer.send.GossipUnicast(dest, encodedData)
 				if err == nil {
@@ -95,7 +96,8 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 						break
 					} else {
 						// TODO: need to implement timeout
-						util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: err:", err)
+						//util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: err:", err)
+						fmt.Println("GossipMessageManager.SendToRemote: err:", err)
 						util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: 1sec wait and do retry")
 						time.Sleep(1 * time.Second)
 					}
@@ -113,7 +115,8 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 // use at notification of information for CtoC stream establishment (4way handshake)
 // and at doing heartbeat (maybe)
 func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, timeout time.Duration, seqNum uint64, data []byte) error {
-	util.OverlayDebugPrintln("GossipMessageManager.SendPingAndPong called. dest:", dest, "streamID:", streamID, " data:", data)
+	//util.OverlayDebugPrintln("GossipMessageManager.SendPingAndPong called. dest:", dest, "streamID:", streamID, " data:", data)
+	util.OverlayDebugPrintln("GossipMessageManager.SendPingAndPong called. dest:", dest, "streamID:", streamID)
 
 	var ret error
 	c := make(chan struct{})
@@ -186,8 +189,9 @@ func (gmm *GossipMessageManager) onPacketReceived(src mesh.PeerName, buf []byte)
 	if err != nil {
 		panic(err)
 	}
-	util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID, " Buf:", buf)
-	util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. gp:", *gp)
+	//util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID, " Buf:", buf)
+	util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID)
+	//util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. gp:", *gp)
 
 	if gp.PktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.ReceiverSide == ServerSide {
 		util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived: notify packet received and passed to root handler (ServerSide)")
@@ -213,7 +217,8 @@ func (gmm *GossipMessageManager) onPacketReceived(src mesh.PeerName, buf []byte)
 	if err2 != nil {
 		panic(err2)
 	}
-	util.OverlayDebugPrintln(fmt.Sprintf("onPacketReceived %s %v", src, buf))
+	//util.OverlayDebugPrintln(fmt.Sprintf("onPacketReceived %s %v", src, buf))
+	util.OverlayDebugPrintln(fmt.Sprintf("onPacketReceived %s", src))
 	return nil
 }
 
