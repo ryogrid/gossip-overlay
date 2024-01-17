@@ -144,8 +144,8 @@ func (oc *OverlayClient) OpenChannel(streamId uint16) (*OverlayStream, uint16, e
 	util.OverlayDebugPrintln("end of OverlayClient::OpenChannel")
 
 	// start heartbeat thread
-	tmpCh := make(chan bool)
-	oc.HertbeatThFinCh = &tmpCh
+	//tmpCh := make(chan bool)
+	//oc.HertbeatThFinCh = &tmpCh
 	//go oc.heaertbeatSendingTh(overlayStream.gsess)
 
 	return overlayStream, streamId_, nil
@@ -188,6 +188,6 @@ loop:
 }
 
 func (oc *OverlayClient) Destroy() error {
-	close(*oc.HertbeatThFinCh)
+	//close(*oc.HertbeatThFinCh)
 	return nil
 }

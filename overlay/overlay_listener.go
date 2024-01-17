@@ -1,6 +1,7 @@
 package overlay
 
 import (
+	"crypto/tls"
 	"fmt"
 	"github.com/ryogrid/gossip-overlay/gossip"
 	"net"
@@ -24,11 +25,31 @@ func NewOverlayListener(ol *OverlayPeer) net.Listener {
 }
 
 // Accept waits for and returns the next connection to the listener.
+// func (ol *OverlayListener) Accept() (net.Conn, error) {
 func (ol *OverlayListener) Accept() (net.Conn, error) {
 	fmt.Println("OverlayListener::Accept called", fmt.Sprintf("%d", ol.overlayServer.peer.GossipDataMan.Self))
 	channel, _, _, err := ol.overlayServer.Accept()
 	fmt.Println("OverlayListener::Accept fin", fmt.Sprintf("%v", err))
-	return channel, err
+	//return channel, err
+
+	cert := "cert.pem" // e.g. '/path/to/my/client-cert.pem'
+	key := "key.pem"   // e.g. '/path/to/my/client-key.pem'
+
+	//pool := x509.NewCertPool()
+	//pem, err := ioutil.ReadFile(dbRootCert)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if ok := pool.AppendCertsFromPEM(pem); !ok {
+	//	return nil, errors.New("unable to append root cert to pool")
+	//}
+	certificate, err := tls.LoadX509KeyPair(cert, key)
+	if err != nil {
+		return nil, err
+	}
+	//conn := tls.Server(channel, &tls.Config{InsecureSkipVerify: true, ClientAuth: tls.NoClientCert, Certificates: []tls.Certificate{certificate}})
+	conn := tls.Server(channel, &tls.Config{ClientAuth: tls.NoClientCert, Certificates: []tls.Certificate{certificate}})
+	return conn, nil
 }
 
 // Close closes the listener.
