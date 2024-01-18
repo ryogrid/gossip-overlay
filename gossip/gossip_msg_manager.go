@@ -231,9 +231,9 @@ func (gmm *GossipMessageManager) whenClose(remotePeer mesh.PeerName, streamID ui
 
 func (gmm *GossipMessageManager) NewGossipSessionForClientToClient(remotePeer mesh.PeerName, streamID uint16) (*GossipSession, error) {
 	ret := &GossipSession{
-		localAddress: &PeerAddress{gmm.gossipDM.Self},
+		localAddress: &PeerAddress{gmm.gossipDM.Self, gmm.localAddress.PeerHost},
 		//remoteAddress:      []*PeerAddress{&PeerAddress{remotePeer}},
-		remoteAddress: &PeerAddress{remotePeer},
+		remoteAddress: &PeerAddress{remotePeer, nil},
 		//RemoteAddressesMtx: &sync.Mutex{},
 		//SessMtx:            sync.RWMutex{},
 		gossipDM:          gmm.gossipDM,

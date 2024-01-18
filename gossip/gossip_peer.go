@@ -1,10 +1,12 @@
 package gossip
 
 import (
+	"fmt"
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"io/ioutil"
 	"log"
+	"strconv"
 )
 
 // GossipPeer encapsulates GossipDataManager, GossipMessageManager and implements mesh.Gossiper.
@@ -37,9 +39,11 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, nickname *string, channel *
 
 	actions := make(chan func())
 	tmpDM := NewGossipDataManager(self)
+	peerHost := meshConf.Host + ":" + strconv.Itoa(meshConf.Port)
+	fmt.Println("peerHost: ", peerHost)
 	p := &GossipPeer{
 		GossipDataMan: tmpDM,
-		GossipMM:      NewGossipMessageManager(&PeerAddress{self}, tmpDM),
+		GossipMM:      NewGossipMessageManager(&PeerAddress{self, &peerHost}, tmpDM),
 		send:          nil, // must .registerGossipObj() later
 		actions:       actions,
 		quit:          make(chan struct{}),

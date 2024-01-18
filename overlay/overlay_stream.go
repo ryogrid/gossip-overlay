@@ -21,15 +21,17 @@ func NewOverlayStream(channel *datachannel.DataChannel, oc *OverlayClient, assoc
 }
 
 func (os *OverlayStream) LocalAddr() net.Addr {
-	return &gossip.PeerAddress{
-		PeerName: os.oc.peer.GossipDataMan.Self,
-	}
+	return os.gsess.LocalAddr()
+	//return &gossip.PeerAddress{
+	//	PeerName: os.oc.peer.GossipDataMan.Self,,
+	//}
 }
 
 func (os *OverlayStream) RemoteAddr() net.Addr {
-	return &gossip.PeerAddress{
-		os.oc.remotePeerName,
-	}
+	return os.gsess.RemoteAddr()
+	//return &gossip.PeerAddress{
+	//	os.oc.remotePeerName,
+	//}
 }
 
 func (os *OverlayStream) SetDeadline(t time.Time) error {

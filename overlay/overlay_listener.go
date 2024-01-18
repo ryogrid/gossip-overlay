@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ryogrid/gossip-overlay/gossip"
 	"net"
+	"strconv"
 )
 
 type OverlayListener struct {
@@ -65,7 +66,9 @@ func (ol *OverlayListener) Close() error {
 // Addr returns the listener's network address.
 func (ol *OverlayListener) Addr() net.Addr {
 	fmt.Println("OverlayListener::Addr called")
+	peerHost := ol.overlayServer.peer.Router.Host + ":" + strconv.Itoa(ol.overlayServer.peer.Router.Port)
 	return &gossip.PeerAddress{
 		PeerName: ol.overlayPeer.Peer.GossipDataMan.Self,
+		PeerHost: &peerHost,
 	}
 }

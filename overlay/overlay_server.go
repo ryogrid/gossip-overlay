@@ -60,11 +60,11 @@ loop:
 		case pkt = <-recvPktCh:
 			util.OverlayDebugPrintln(pkt)
 			if pkt.SeqNum == 1 {
-				util.OverlayDebugPrintln("OverlayServer::newHandshakeHandlingThServSide: received expected packet")
+				util.OverlayDebugPrintln("overlayServer::newHandshakeHandlingThServSide: received expected packet")
 				// second packat
 				break loop
 			} else {
-				util.OverlayDebugPrintln("OverlayServer::newHandshakeHandlingThServSide: received unexpected packet")
+				util.OverlayDebugPrintln("overlayServer::newHandshakeHandlingThServSide: received unexpected packet")
 				// exit thread as handshake failed
 				notifyErrCh <- &clientInfo{remotePeer, streamID}
 				return
@@ -82,7 +82,7 @@ loop:
 }
 
 func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
-	util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: start")
+	util.OverlayDebugPrintln("overlayServer::ClientInfoNotifyPktRootHandlerTh: start")
 
 	// "peer name"-"stream id" -> channel to appropriate packet handling thread
 	//handshakePktHandleThChans := sync.Map{}
@@ -90,10 +90,10 @@ func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
 	//notifyErrCh := make(chan *clientInfo, 1)
 
 	for {
-		util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: waiting pkt")
+		util.OverlayDebugPrintln("overlayServer::ClientInfoNotifyPktRootHandlerTh: waiting pkt")
 		select {
 		case pkt := <-ols.gossipMM.NotifyPktChForServerSide:
-			util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: received pkt:", pkt)
+			util.OverlayDebugPrintln("overlayServer::ClientInfoNotifyPktRootHandlerTh: received pkt:", pkt)
 			// pass packet to appropriate handling thread (if not exist, spawn new handling thread)
 			//key := pkt.FromPeer.String() + "-" + string(pkt.StreamID)
 			//if ch, ok := handshakePktHandleThChans.Load(key); ok {
@@ -117,7 +117,7 @@ func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
 			//	handshakePktHandleThChans.Delete(errRemote.remotePeerName.String() + "-" + string(errRemote.streamID))
 		}
 	}
-	util.OverlayDebugPrintln("OverlayServer::ClientInfoNotifyPktRootHandlerTh: end")
+	util.OverlayDebugPrintln("overlayServer::ClientInfoNotifyPktRootHandlerTh: end")
 }
 
 func (ols *OverlayServer) InitClientInfoNotifyPktRootHandlerTh() error {
@@ -145,7 +145,7 @@ func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, uint16, error
 }
 
 func (ols *OverlayServer) Close() error {
-	// TODO: need to implement OverlayServer::Close
+	// TODO: need to implement overlayServer::Close
 
 	return nil
 }
