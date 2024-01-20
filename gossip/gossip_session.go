@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"errors"
+	"fmt"
 	"github.com/ryogrid/gossip-overlay/util"
 	"math"
 	"net"
@@ -74,8 +75,10 @@ func (oc *GossipSession) LocalAddr() net.Addr {
 }
 
 func (oc *GossipSession) RemoteAddr() net.Addr {
-	util.OverlayDebugPrintln("GossipSession.RemoteAddr called")
+	//util.OverlayDebugPrintln("GossipSession.RemoteAddr called")
+	fmt.Printf("GossipSession.RemoteAddr called: %d\n", oc.remoteAddress.PeerName)
 	if oc.remoteAddress.PeerName != math.MaxUint64 {
+		fmt.Println(*oc.remoteAddress.PeerHost)
 		return oc.remoteAddress
 	}
 	return nil

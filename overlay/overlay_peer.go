@@ -15,7 +15,8 @@ import (
 var LoggerObj *log.Logger
 
 type OverlayPeer struct {
-	Peer *gossip.GossipPeer
+	Peer           *gossip.GossipPeer
+	remotePeerHost *string
 }
 
 func NewOverlayPeer(host *string, gossipListenPort int, peers *util.Stringset) (*OverlayPeer, error) {
@@ -37,13 +38,14 @@ func NewOverlayPeer(host *string, gossipListenPort int, peers *util.Stringset) (
 	p := gossip.NewPeer(name, LoggerObj, &emptyStr, &emptyStr, &meshConf, peers)
 	fmt.Println("NewOverlayPeer: peers=", peers.Slice())
 
-	return &OverlayPeer{p}, nil
+	remotePeerHost := meshConf.Host + ":" + strconv.Itoa(meshConf.Port)
+	return &OverlayPeer{p, &remotePeerHost}, nil
 }
 
 func (olPeer *OverlayPeer) OpenStreamToTargetPeer(peerId mesh.PeerName) net.Conn {
 	LoggerObj.Println(fmt.Sprintf("Opening a stream to %d", peerId))
 
-	oc, err := NewOverlayClient(olPeer.Peer, peerId, olPeer.Peer.GossipMM)
+	oc, err := NewOverlayClient(olPeer.Peer, peerId, *olPeer.remotePeerHost, olPeer.Peer.GossipMM)
 	if err != nil {
 		panic(err)
 	}

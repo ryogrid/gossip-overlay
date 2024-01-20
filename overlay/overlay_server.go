@@ -11,6 +11,7 @@ import (
 
 type clientInfo struct {
 	remotePeerName mesh.PeerName
+	remotePeerHost string
 	streamID       uint16
 }
 
@@ -40,7 +41,7 @@ func (ols *OverlayServer) newHandshakeHandlingThServSide(remotePeer mesh.PeerNam
 	pkt := <-recvPktCh
 	if pkt.SeqNum != 0 {
 		// exit thread as handshake failed
-		notifyErrCh <- &clientInfo{remotePeer, streamID}
+		notifyErrCh <- &clientInfo{remotePeer, pkt.FromPeerHost, streamID}
 		return
 	}
 	util.OverlayDebugPrintln(pkt)
@@ -66,19 +67,19 @@ loop:
 			} else {
 				util.OverlayDebugPrintln("overlayServer::newHandshakeHandlingThServSide: received unexpected packet")
 				// exit thread as handshake failed
-				notifyErrCh <- &clientInfo{remotePeer, streamID}
+				notifyErrCh <- &clientInfo{remotePeer, pkt.FromPeerHost, streamID}
 				return
 			}
 		case <-done:
 			// timeout reached
 			// exit thread as handshake failed
-			notifyErrCh <- &clientInfo{remotePeer, streamID}
+			notifyErrCh <- &clientInfo{remotePeer, pkt.FromPeerHost, streamID}
 			return
 		}
 	}
 	ols.gossipMM.SendPongPktToClient(remotePeer, streamID, 1)
 
-	finNotifyCh <- &clientInfo{remotePeer, streamID}
+	finNotifyCh <- &clientInfo{remotePeer, pkt.FromPeerHost, streamID}
 }
 
 func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
@@ -106,7 +107,7 @@ func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
 			//	newCh <- pkt
 			//}
 			ols.gossipMM.SendPongPktToClient(pkt.FromPeer, pkt.StreamID, 0)
-			ols.info4OLChannelRecvCh <- &clientInfo{pkt.FromPeer, pkt.StreamID}
+			ols.info4OLChannelRecvCh <- &clientInfo{pkt.FromPeer, pkt.FromPeerHost, pkt.StreamID}
 			//case finInfo := <-finCh:
 			//	// remove channel to notify origin thread
 			//	handshakePktHandleThChans.Delete(finInfo.remotePeerName.String() + "-" + string(finInfo.streamID))
@@ -131,7 +132,7 @@ func (ols *OverlayServer) InitClientInfoNotifyPktRootHandlerTh() error {
 func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, uint16, error) {
 	clInfo := <-ols.info4OLChannelRecvCh
 	fmt.Println(clInfo)
-	olc, err := NewOverlayClient(ols.peer, clInfo.remotePeerName, ols.gossipMM)
+	olc, err := NewOverlayClient(ols.peer, clInfo.remotePeerName, clInfo.remotePeerHost, ols.gossipMM)
 	if err != nil {
 		panic(err)
 	}

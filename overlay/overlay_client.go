@@ -20,14 +20,16 @@ var retryCntExceededErr = fmt.Errorf("retryCnt exceeded")
 type OverlayClient struct {
 	peer            *gossip.GossipPeer
 	remotePeerName  mesh.PeerName
+	remotePeerHost  *string
 	gossipMM        *gossip.GossipMessageManager
 	HertbeatThFinCh *chan bool
 }
 
-func NewOverlayClient(p *gossip.GossipPeer, remotePeer mesh.PeerName, gossipMM *gossip.GossipMessageManager) (*OverlayClient, error) {
+func NewOverlayClient(p *gossip.GossipPeer, remotePeer mesh.PeerName, remotePeerHost string, gossipMM *gossip.GossipMessageManager) (*OverlayClient, error) {
 	ret := &OverlayClient{
 		peer:            p,
 		remotePeerName:  remotePeer,
+		remotePeerHost:  &remotePeerHost,
 		gossipMM:        gossipMM,
 		HertbeatThFinCh: nil,
 	}
@@ -43,7 +45,7 @@ func genRandomStreamId() uint16 {
 }
 
 func (oc *OverlayClient) establishCtoCStreamInner(streamID uint16) (*sctp.Association, *gossip.GossipSession, error) {
-	conn, err := oc.peer.GossipMM.NewGossipSessionForClientToClient(oc.remotePeerName, streamID)
+	conn, err := oc.peer.GossipMM.NewGossipSessionForClientToClient(oc.remotePeerName, *oc.remotePeerHost, streamID)
 	if err != nil {
 		fmt.Println(err)
 		return nil, nil, err

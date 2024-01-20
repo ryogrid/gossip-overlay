@@ -78,6 +78,7 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 
 			sendObj := GossipPacket{
 				FromPeer:     gmm.localAddress.PeerName,
+				FromPeerHost: *gmm.localAddress.PeerHost,
 				Buf:          data,
 				ReceiverSide: recvOpSide,
 				StreamID:     streamID,
@@ -229,11 +230,11 @@ func (gmm *GossipMessageManager) whenClose(remotePeer mesh.PeerName, streamID ui
 	return nil
 }
 
-func (gmm *GossipMessageManager) NewGossipSessionForClientToClient(remotePeer mesh.PeerName, streamID uint16) (*GossipSession, error) {
+func (gmm *GossipMessageManager) NewGossipSessionForClientToClient(remotePeer mesh.PeerName, remotePeerHost string, streamID uint16) (*GossipSession, error) {
 	ret := &GossipSession{
 		localAddress: &PeerAddress{gmm.gossipDM.Self, gmm.localAddress.PeerHost},
 		//remoteAddress:      []*PeerAddress{&PeerAddress{remotePeer}},
-		remoteAddress: &PeerAddress{remotePeer, nil},
+		remoteAddress: &PeerAddress{remotePeer, &remotePeerHost},
 		//RemoteAddressesMtx: &sync.Mutex{},
 		//SessMtx:            sync.RWMutex{},
 		gossipDM:          gmm.gossipDM,
