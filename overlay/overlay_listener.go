@@ -59,6 +59,7 @@ func (ol *OverlayListener) Close() error {
 	// TODO: need to implement (OverlayListener::Close)
 	// do nothing now
 
+	ol.overlayServer.Close()
 	fmt.Println("OverlayLister::Close called")
 	return nil
 }

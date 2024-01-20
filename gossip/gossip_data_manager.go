@@ -82,7 +82,8 @@ func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (res
 	val, ok2 := gdm.loadBuffer(fromPeer, streamID)
 	if !ok2 {
 		//panic("no such StreamToNotifySelfInfo")
-		util.OverlayDebugPrintln("GossipDataManager::read: no such buffer. fromPeer:", fromPeer, " streamID:", streamID)
+		//util.OverlayDebugPrintln("GossipDataManager::read: no such buffer. fromPeer:", fromPeer, " streamID:", streamID)
+		fmt.Println("GossipDataManager::read: no such buffer. fromPeer:", fromPeer, " streamID:", streamID)
 		return nil
 		//return make([]byte, 0)
 	}
@@ -108,20 +109,20 @@ func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (res
 		//		time.Sleep(1 * time.Millisecond)
 		//	} else {
 		//		util.OverlayDebugPrintln("GossipDataManager.read: waiting end because GossipSession should closed.")
-		//		val.ReadMtx.Unlock()
+		//		//val.Mtx.Unlock()
 		//		//return make([]byte, 0)
 		//		return nil
 		//	}
 		//}
-
-		storedBuf, ok3 := gdm.loadBuffer(fromPeer, streamID)
-		if ok3 {
-			storedBuf.Mtx.Lock()
-			copiedBuf = append(copiedBuf, storedBuf.Buf...)
-			storedBuf.Buf = make([]byte, 0)
-			//gdm.storeBuffer(fromPeer, streamID, storedBuf)
-			storedBuf.Mtx.Unlock()
-		}
+		//
+		//storedBuf, ok3 := gdm.loadBuffer(fromPeer, streamID)
+		//if ok3 {
+		//	storedBuf.Mtx.Lock()
+		//	copiedBuf = append(copiedBuf, storedBuf.Buf...)
+		//	storedBuf.Buf = make([]byte, 0)
+		//	//gdm.storeBuffer(fromPeer, streamID, storedBuf)
+		//	storedBuf.Mtx.Unlock()
+		//}
 	}
 	//val.ReadMtx.Unlock()
 	//util.OverlayDebugPrintln("GossipDataManager.read called: after checking length of retBase loop.")

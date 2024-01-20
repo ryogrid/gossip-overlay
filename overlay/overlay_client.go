@@ -73,10 +73,12 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 	loggerFactory := logging.NewDefaultLoggerFactory()
 
 	cfg := &datachannel.Config{
-		ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
-		ReliabilityParameter: 5,
-		Label:                "data",
-		LoggerFactory:        loggerFactory,
+		//ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
+		ChannelType: datachannel.ChannelTypeReliable,
+		//ReliabilityParameter: 5,
+		//Label:         "data",
+		Label:         "",
+		LoggerFactory: loggerFactory,
 	}
 
 	//dc, err := datachannel.Dial(a, 100, cfg)

@@ -6,7 +6,6 @@ import (
 	"github.com/ryogrid/gossip-overlay/util"
 	"github.com/weaveworks/mesh"
 	"math"
-	"time"
 )
 
 type clientInfo struct {
@@ -35,6 +34,7 @@ func NewOverlayServer(p *gossip.GossipPeer, gossipMM *gossip.GossipMessageManage
 	return ret, nil
 }
 
+/*
 // thread for handling client info notify packet of each client
 func (ols *OverlayServer) newHandshakeHandlingThServSide(remotePeer mesh.PeerName, streamID uint16,
 	recvPktCh <-chan *gossip.GossipPacket, finNotifyCh chan<- *clientInfo, notifyErrCh chan<- *clientInfo) {
@@ -81,6 +81,7 @@ loop:
 
 	finNotifyCh <- &clientInfo{remotePeer, pkt.FromPeerHost, streamID}
 }
+*/
 
 func (ols *OverlayServer) ClientInfoNotifyPktRootHandlerTh() {
 	util.OverlayDebugPrintln("overlayServer::ClientInfoNotifyPktRootHandlerTh: start")
@@ -130,7 +131,10 @@ func (ols *OverlayServer) InitClientInfoNotifyPktRootHandlerTh() error {
 }
 
 func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, uint16, error) {
-	clInfo := <-ols.info4OLChannelRecvCh
+	clInfo, more := <-ols.info4OLChannelRecvCh
+	if !more {
+		return nil, math.MaxUint64, math.MaxUint16, fmt.Errorf("OverlayServer is closed")
+	}
 	fmt.Println(clInfo)
 	olc, err := NewOverlayClient(ols.peer, clInfo.remotePeerName, clInfo.remotePeerHost, ols.gossipMM)
 	if err != nil {
@@ -147,6 +151,7 @@ func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, uint16, error
 
 func (ols *OverlayServer) Close() error {
 	// TODO: need to implement overlayServer::Close
+	close(ols.info4OLChannelRecvCh)
 
 	return nil
 }

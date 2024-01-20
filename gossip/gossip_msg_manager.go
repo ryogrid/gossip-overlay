@@ -62,7 +62,8 @@ func (gmm *GossipMessageManager) unregisterChToHandlerTh(dest mesh.PeerName, str
 
 func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, seqNum uint64, data []byte) error {
 	//util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
-	util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID)
+	//util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID)
+	fmt.Println("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID)
 	var ret error = nil
 	c := make(chan struct{})
 	//gmm.actions <- func() {
@@ -191,7 +192,8 @@ func (gmm *GossipMessageManager) onPacketReceived(src mesh.PeerName, buf []byte)
 		panic(err)
 	}
 	//util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID, " Buf:", buf)
-	util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID)
+	//util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID)
+	fmt.Println("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID, " bufSize:", len(gp.Buf))
 	//util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. gp:", *gp)
 
 	if gp.PktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.ReceiverSide == ServerSide {

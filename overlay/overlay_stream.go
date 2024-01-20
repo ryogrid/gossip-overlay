@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-const MaxPayloadSizeOnOverlayStream = 1024
-
 type OverlayStream struct {
 	channel     *datachannel.DataChannel
 	oc          *OverlayClient
@@ -34,7 +32,7 @@ func (os *OverlayStream) LocalAddr() net.Addr {
 }
 
 func (os *OverlayStream) RemoteAddr() net.Addr {
-	fmt.Println("OverlayStream::RemoteAddr called")
+	fmt.Println("OverlayStream::RemoteAddr called ", os.gsess.RemoteAddr().String())
 	return os.gsess.RemoteAddr()
 	//return &gossip.PeerAddress{
 	//	os.oc.remotePeerName,
@@ -42,17 +40,17 @@ func (os *OverlayStream) RemoteAddr() net.Addr {
 }
 
 func (os *OverlayStream) SetDeadline(t time.Time) error {
-	// do nothing
+	os.channel.SetReadDeadline(t)
 	return nil
 }
 
 func (os *OverlayStream) SetReadDeadline(t time.Time) error {
-	// do nothing
+	os.channel.SetReadDeadline(t)
 	return nil
 }
 
 func (os *OverlayStream) SetWriteDeadline(t time.Time) error {
-	// do nothing
+	os.channel.SetReadDeadline(t)
 	return nil
 }
 
@@ -71,12 +69,15 @@ func (os *OverlayStream) Read(p []byte) (n int, err error) {
 	//}
 	//p = retBuf
 	//os.localBufMtx.Unlock()
-	n, _, err = os.channel.ReadDataChannel(p)
-	return n, err
+	n_, _, err_ := os.channel.ReadDataChannel(p)
+	fmt.Println("OverlayStream::Read called", n_, err)
+	return n_, err_
 }
 
 func (os *OverlayStream) Write(p []byte) (n int, err error) {
-	return os.channel.WriteDataChannel(p, false)
+	n_, err_ := os.channel.WriteDataChannel(p, false)
+	fmt.Println("OverlayStream::Write called", n_, err_)
+	return n_, err_
 }
 
 func (os *OverlayStream) Close() error {
