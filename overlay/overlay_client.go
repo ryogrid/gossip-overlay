@@ -65,7 +65,7 @@ func (oc *OverlayClient) establishCtoCStreamInner(streamID uint16) (*sctp.Associ
 	return a, conn, nil
 }
 
-func (oc *OverlayClient) establishCtoCStreamClient(streamID uint16) (*OverlayStream, error) {
+func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, error) {
 	a, gsess, _ := oc.establishCtoCStreamInner(streamID)
 
 	util.OverlayDebugPrintln("opened a stream for client to client", streamID)
@@ -73,10 +73,10 @@ func (oc *OverlayClient) establishCtoCStreamClient(streamID uint16) (*OverlayStr
 	loggerFactory := logging.NewDefaultLoggerFactory()
 
 	cfg := &datachannel.Config{
-		//ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
-		ChannelType: datachannel.ChannelTypeReliable,
+		ChannelType: datachannel.ChannelTypePartialReliableRexmit,
+		//ChannelType: datachannel.ChannelTypeReliable,
 		//ChannelType: datachannel.ChannelTypeReliableUnordered,
-		//ReliabilityParameter: 5,
+		ReliabilityParameter: 1,
 		//Label:         "data",
 		Label:         "",
 		LoggerFactory: loggerFactory,
@@ -85,37 +85,6 @@ func (oc *OverlayClient) establishCtoCStreamClient(streamID uint16) (*OverlayStr
 
 	//dc, err := datachannel.Dial(a, 100, cfg)
 	dc, err := datachannel.Dial(a, streamID, cfg)
-	if err != nil {
-		panic(err)
-	}
-
-	util.OverlayDebugPrintln("established a OverlayStream")
-
-	//return dc, nil
-	return NewOverlayStream(dc, oc, a, gsess), nil
-}
-
-func (oc *OverlayClient) establishCtoCStreamServer(streamID uint16) (*OverlayStream, error) {
-	a, gsess, _ := oc.establishCtoCStreamInner(streamID)
-
-	util.OverlayDebugPrintln("opened a stream for client to client", streamID)
-
-	loggerFactory := logging.NewDefaultLoggerFactory()
-
-	cfg := &datachannel.Config{
-		//ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
-		ChannelType: datachannel.ChannelTypeReliable,
-		//ChannelType: datachannel.ChannelTypeReliableUnordered,
-		//ReliabilityParameter: 5,
-		//Label:         "data",
-		Label:         "",
-		LoggerFactory: loggerFactory,
-		Negotiated:    false,
-	}
-
-	//dc, err := datachannel.Dial(a, 100, cfg)
-	dc, err := datachannel.Dial(a, streamID, cfg)
-	//dc, err := datachannel.Accept(a, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -154,7 +123,7 @@ retry:
 	return nil
 }
 
-func (oc *OverlayClient) OpenChannel(streamId uint16, isServer bool) (*OverlayStream, uint16, error) {
+func (oc *OverlayClient) OpenChannel(streamId uint16) (*OverlayStream, uint16, error) {
 	streamId_ := uint16(0)
 	if streamId != math.MaxUint16 {
 		streamId_ = streamId
@@ -171,18 +140,9 @@ func (oc *OverlayClient) OpenChannel(streamId uint16, isServer bool) (*OverlaySt
 		}
 	}
 
-	var overlayStream *OverlayStream
-	var err error
-	if isServer {
-		overlayStream, err = oc.establishCtoCStreamServer(streamId_)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		overlayStream, err = oc.establishCtoCStreamClient(streamId_)
-		if err != nil {
-			panic(err)
-		}
+	overlayStream, err := oc.establishCtoCStream(streamId_)
+	if err != nil {
+		panic(err)
 	}
 
 	if err != nil {

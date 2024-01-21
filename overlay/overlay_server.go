@@ -141,7 +141,7 @@ func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, uint16, error
 		panic(err)
 	}
 
-	os, _, err2 := olc.OpenChannel(clInfo.streamID, true)
+	os, _, err2 := olc.OpenChannel(clInfo.streamID)
 	if err2 != nil {
 		return nil, math.MaxUint64, clInfo.streamID, err2
 	}

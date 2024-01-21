@@ -149,7 +149,7 @@ func clientRoutine(p *gossip.GossipPeer, destName mesh.PeerName, remotePeerHost 
 		panic(err)
 	}
 
-	channel, streamID, err2 := oc.OpenChannel(math.MaxUint16, false)
+	channel, streamID, err2 := oc.OpenChannel(math.MaxUint16)
 	if err2 != nil {
 		panic(err2)
 	}

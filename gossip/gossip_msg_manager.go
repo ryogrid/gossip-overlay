@@ -214,7 +214,9 @@ func (gmm *GossipMessageManager) onPacketReceived(src mesh.PeerName, buf []byte)
 			destCh.(chan *GossipPacket) <- gp
 			return nil
 		} else {
-			panic("illigal internal state!")
+			//panic("illigal internal state!")
+			// ignore
+			return nil
 		}
 	} else if gp.PktKind == PACKET_KIND_CTC_HEARTBEAT && gp.ReceiverSide == ClientSide { // heartbeat
 		util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived: heartbeat packet received")
