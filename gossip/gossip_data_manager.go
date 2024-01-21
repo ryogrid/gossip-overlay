@@ -18,12 +18,12 @@ const (
 )
 
 type BufferWithMutex struct {
-	Buf []byte
+	Buf [][]byte
 	Mtx *sync.Mutex
 	//ReadMtx *sync.Mutex
 }
 
-func NewBufferWithMutex(buf []byte) *BufferWithMutex {
+func NewBufferWithMutex(buf [][]byte) *BufferWithMutex {
 	return &BufferWithMutex{
 		Buf: buf,
 		Mtx: &sync.Mutex{}, // used by write / read operation
@@ -78,6 +78,7 @@ func (gdm *GossipDataManager) removeBuffer(peerName mesh.PeerName, streamID uint
 func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (result []byte) {
 	//util.OverlayDebugPrintln("GossipDataManager.read called: start. fromPeer:", fromPeer, " streamID:", streamID)
 
+	var isDataEmpty = false
 	var copiedBuf = make([]byte, 0)
 	val, ok2 := gdm.loadBuffer(fromPeer, streamID)
 	if !ok2 {
@@ -88,13 +89,18 @@ func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (res
 		//return make([]byte, 0)
 	}
 	val.Mtx.Lock()
-	copiedBuf = append(copiedBuf, val.Buf...)
-	val.Buf = make([]byte, 0)
-	val.Mtx.Unlock()
+	if len(val.Buf) != 0 {
+		copiedBuf = append(copiedBuf, val.Buf[0]...)
+		val.Buf = val.Buf[1:]
+		val.Mtx.Unlock()
+	} else {
+		isDataEmpty = true
+		val.Mtx.Unlock()
+	}
 
 	//val.ReadMtx.Lock()
 	//util.OverlayDebugPrintln("GossipDataManager.read called: before checking length of retBase loop.")
-	if len(copiedBuf) == 0 {
+	if isDataEmpty {
 		time.Sleep(1 * time.Millisecond)
 		//for {
 		//	if storedBuf, ok := gdm.loadBuffer(fromPeer, streamID); ok {
@@ -135,7 +141,7 @@ func (gdm *GossipDataManager) write(fromPeer mesh.PeerName, streamID uint16, dat
 	//util.OverlayDebugPrintln("GossipDataManager.write called. fromPeer:", fromPeer, " streamID", streamID, " data:", data)
 	util.OverlayDebugPrintln("GossipDataManager.write called. fromPeer:", fromPeer, " streamID", streamID)
 
-	var stBuf []byte
+	var stBuf [][]byte
 	var stBufMtx *sync.Mutex
 	var bufWithMtx *BufferWithMutex
 	if val, ok := gdm.loadBuffer(fromPeer, streamID); ok {
@@ -145,7 +151,7 @@ func (gdm *GossipDataManager) write(fromPeer mesh.PeerName, streamID uint16, dat
 		stBuf = val.Buf
 	} else {
 		util.OverlayDebugPrintln("GossipDataManager::write: no such buffer but create. fromPeer:", fromPeer, " streamID:", streamID)
-		stBuf = make([]byte, 0)
+		stBuf = make([][]byte, 0)
 		//st.bufs.Store(fromPeer, stBuf)
 		bufWithMtx = NewBufferWithMutex(stBuf)
 		gdm.storeBuffer(fromPeer, streamID, bufWithMtx)
@@ -154,12 +160,11 @@ func (gdm *GossipDataManager) write(fromPeer mesh.PeerName, streamID uint16, dat
 		//return errors.New("no such buffer")
 	}
 
-	tmpBuf := make([]byte, 0)
-	retBuf := make([]byte, 0)
-	tmpBuf = append(tmpBuf, stBuf...)
-	tmpBuf = append(tmpBuf, data...)
-	retBuf = append(retBuf, tmpBuf...)
-	bufWithMtx.Buf = tmpBuf
+	newBlock := make([]byte, 0)
+	//newBlock = append(newBlock, stBuf...)
+	newBlock = append(newBlock, data...)
+	stBuf = append(stBuf, newBlock)
+	bufWithMtx.Buf = stBuf
 	gdm.storeBuffer(fromPeer, streamID, bufWithMtx)
 	stBufMtx.Unlock()
 

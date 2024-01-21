@@ -247,7 +247,7 @@ func (gmm *GossipMessageManager) NewGossipSessionForClientToClient(remotePeer me
 		IsActive:          true,
 	}
 	if _, ok := gmm.gossipDM.loadBuffer(remotePeer, streamID); !ok {
-		gmm.gossipDM.storeBuffer(remotePeer, streamID, NewBufferWithMutex(make([]byte, 0)))
+		gmm.gossipDM.storeBuffer(remotePeer, streamID, NewBufferWithMutex(make([][]byte, 0)))
 	}
 
 	return ret, nil
