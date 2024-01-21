@@ -50,7 +50,7 @@ func (olPeer *OverlayPeer) OpenStreamToTargetPeer(peerId mesh.PeerName, remotePe
 		panic(err)
 	}
 
-	channel, streamID, err2 := oc.OpenChannel(math.MaxUint16)
+	channel, streamID, err2 := oc.OpenChannel(math.MaxUint16, false)
 	if err2 != nil {
 		return nil
 	}
