@@ -2,10 +2,10 @@ package overlay
 
 import (
 	"context"
-	"fmt"
 	"github.com/pion/datachannel"
 	"github.com/pion/sctp"
 	"github.com/ryogrid/gossip-overlay/gossip"
+	"github.com/ryogrid/gossip-overlay/util"
 	"net"
 	"sync"
 	"time"
@@ -32,7 +32,7 @@ func (os *OverlayStream) LocalAddr() net.Addr {
 }
 
 func (os *OverlayStream) RemoteAddr() net.Addr {
-	fmt.Println("OverlayStream::RemoteAddr called ", os.gsess.RemoteAddr().String())
+	util.OverlayDebugPrintln("OverlayStream::RemoteAddr called ", os.gsess.RemoteAddr().String())
 	return os.gsess.RemoteAddr()
 	//return &gossip.PeerAddress{
 	//	os.oc.remotePeerName,
@@ -69,18 +69,18 @@ func (os *OverlayStream) Read(p []byte) (n int, err error) {
 	//}
 	//p = retBuf
 	//os.localBufMtx.Unlock()
-	fmt.Println("OverlayStream::Read called cap(p)=", cap(p))
+	//fmt.Println("OverlayStream::Read called cap(p)=", cap(p))
 	n_, _, err_ := os.channel.ReadDataChannel(p)
-	if n == 0 {
-		fmt.Printf("OverlayStream::Read: n == 0, %v", err)
-	}
-	fmt.Println("OverlayStream::Read called", n_, err)
+	//if n == 0 {
+	//	fmt.Printf("OverlayStream::Read: n == 0, %v", err)
+	//}
+	util.OverlayDebugPrintln("OverlayStream::Read called", n_, err)
 	return n_, err_
 }
 
 func (os *OverlayStream) Write(p []byte) (n int, err error) {
 	n_, err_ := os.channel.WriteDataChannel(p, false)
-	fmt.Println("OverlayStream::Write called", n_, err_)
+	util.OverlayDebugPrintln("OverlayStream::Write called", n_, err_)
 	return n_, err_
 }
 

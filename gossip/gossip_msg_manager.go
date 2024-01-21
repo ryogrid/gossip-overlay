@@ -19,6 +19,8 @@ type GossipMessageManager struct {
 	quit        chan struct{}
 	// notification packet from client is sent to this channel
 	NotifyPktChForServerSide chan *GossipPacket
+	activeConnNum            int32
+	activeConnNumMtx         *sync.Mutex
 }
 
 func NewGossipMessageManager(localAddress *PeerAddress, gossipDM *GossipDataManager) *GossipMessageManager {
@@ -30,6 +32,8 @@ func NewGossipMessageManager(localAddress *PeerAddress, gossipDM *GossipDataMana
 		actions:                  actions,
 		quit:                     make(chan struct{}),
 		NotifyPktChForServerSide: make(chan *GossipPacket),
+		activeConnNum:            0,
+		activeConnNumMtx:         new(sync.Mutex),
 	}
 
 	go ret.loop(actions)
@@ -62,8 +66,8 @@ func (gmm *GossipMessageManager) unregisterChToHandlerTh(dest mesh.PeerName, str
 
 func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, seqNum uint64, data []byte) (int, error) {
 	//util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
-	//util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID)
-	fmt.Println("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID)
+	util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID)
+	//fmt.Println("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID)
 	var ret error = nil
 	var n = 0
 	c := make(chan struct{})
@@ -100,8 +104,8 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 						break
 					} else {
 						// TODO: need to implement timeout
-						//util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: err:", err)
-						fmt.Println("GossipMessageManager.SendToRemote: err:", err)
+						util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: err:", err)
+						//fmt.Println("GossipMessageManager.SendToRemote: err:", err)
 						util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: 1sec wait and do retry")
 						time.Sleep(1 * time.Second)
 					}
@@ -194,8 +198,8 @@ func (gmm *GossipMessageManager) onPacketReceived(src mesh.PeerName, buf []byte)
 		panic(err)
 	}
 	//util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID, " Buf:", buf)
-	//util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID)
-	fmt.Println("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID, " bufSize:", len(gp.Buf))
+	util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID)
+	//fmt.Println("GossipMessageManager.onPacketReceived called. src:", src, " streamId:", gp.StreamID, " bufSize:", len(gp.Buf))
 	//util.OverlayDebugPrintln("GossipMessageManager.onPacketReceived called. gp:", *gp)
 
 	if gp.PktKind == PACKET_KIND_NOTIFY_PEER_INFO && gp.ReceiverSide == ServerSide {
@@ -230,11 +234,24 @@ func (gmm *GossipMessageManager) onPacketReceived(src mesh.PeerName, buf []byte)
 func (gmm *GossipMessageManager) whenClose(remotePeer mesh.PeerName, streamID uint16) error {
 	util.OverlayDebugPrintln("GossipDMessageManager.whenClose called. remotePeer:", remotePeer, " streamID:", streamID)
 	gmm.gossipDM.removeBuffer(remotePeer, streamID)
+	//gmm.activeConnNumMtx.Lock()
+	//defer gmm.activeConnNumMtx.Unlock()
+	//gmm.activeConnNum--
 
 	return nil
 }
 
 func (gmm *GossipMessageManager) NewGossipSessionForClientToClient(remotePeer mesh.PeerName, remotePeerHost string, streamID uint16) (*GossipSession, error) {
+	//gmm.activeConnNumMtx.Lock()
+	//
+	//if gmm.activeConnNum > 0 {
+	//	gmm.activeConnNumMtx.Unlock()
+	//	time.Sleep(100 * time.Millisecond)
+	//	gmm.activeConnNumMtx.Lock()
+	//}
+	//gmm.activeConnNum++
+	//gmm.activeConnNumMtx.Unlock()
+
 	ret := &GossipSession{
 		localAddress: &PeerAddress{gmm.gossipDM.Self, gmm.localAddress.PeerHost},
 		//remoteAddress:      []*PeerAddress{&PeerAddress{remotePeer}},

@@ -135,7 +135,7 @@ func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, uint16, error
 	if !more {
 		return nil, math.MaxUint64, math.MaxUint16, fmt.Errorf("OverlayServer is closed")
 	}
-	fmt.Println(clInfo)
+	//fmt.Println(clInfo)
 	olc, err := NewOverlayClient(ols.peer, clInfo.remotePeerName, clInfo.remotePeerHost, ols.gossipMM)
 	if err != nil {
 		panic(err)

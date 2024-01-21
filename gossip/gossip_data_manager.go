@@ -83,8 +83,8 @@ func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (res
 	val, ok2 := gdm.loadBuffer(fromPeer, streamID)
 	if !ok2 {
 		//panic("no such StreamToNotifySelfInfo")
-		//util.OverlayDebugPrintln("GossipDataManager::read: no such buffer. fromPeer:", fromPeer, " streamID:", streamID)
-		fmt.Println("GossipDataManager::read: no such buffer. fromPeer:", fromPeer, " streamID:", streamID)
+		util.OverlayDebugPrintln("GossipDataManager::read: no such buffer. fromPeer:", fromPeer, " streamID:", streamID)
+		//fmt.Println("GossipDataManager::read: no such buffer. fromPeer:", fromPeer, " streamID:", streamID)
 		return nil
 		//return make([]byte, 0)
 	}

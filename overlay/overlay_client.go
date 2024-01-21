@@ -74,12 +74,13 @@ func (oc *OverlayClient) establishCtoCStreamClient(streamID uint16) (*OverlayStr
 
 	cfg := &datachannel.Config{
 		//ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
-		//ChannelType: datachannel.ChannelTypeReliable,
-		ChannelType: datachannel.ChannelTypeReliableUnordered,
+		ChannelType: datachannel.ChannelTypeReliable,
+		//ChannelType: datachannel.ChannelTypeReliableUnordered,
 		//ReliabilityParameter: 5,
 		//Label:         "data",
 		Label:         "",
 		LoggerFactory: loggerFactory,
+		Negotiated:    false,
 	}
 
 	//dc, err := datachannel.Dial(a, 100, cfg)
@@ -103,17 +104,18 @@ func (oc *OverlayClient) establishCtoCStreamServer(streamID uint16) (*OverlayStr
 
 	cfg := &datachannel.Config{
 		//ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
-		//ChannelType: datachannel.ChannelTypeReliable,
-		ChannelType: datachannel.ChannelTypeReliableUnordered,
+		ChannelType: datachannel.ChannelTypeReliable,
+		//ChannelType: datachannel.ChannelTypeReliableUnordered,
 		//ReliabilityParameter: 5,
 		//Label:         "data",
 		Label:         "",
 		LoggerFactory: loggerFactory,
+		Negotiated:    false,
 	}
 
 	//dc, err := datachannel.Dial(a, 100, cfg)
-	//dc, err := datachannel.Dial(a, streamID, cfg)
-	dc, err := datachannel.Accept(a, cfg)
+	dc, err := datachannel.Dial(a, streamID, cfg)
+	//dc, err := datachannel.Accept(a, cfg)
 	if err != nil {
 		panic(err)
 	}
