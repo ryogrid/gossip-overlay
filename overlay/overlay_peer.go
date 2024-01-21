@@ -42,10 +42,10 @@ func NewOverlayPeer(host *string, gossipListenPort int, peers *util.Stringset) (
 	return &OverlayPeer{p, &remotePeerHost}, nil
 }
 
-func (olPeer *OverlayPeer) OpenStreamToTargetPeer(peerId mesh.PeerName) net.Conn {
+func (olPeer *OverlayPeer) OpenStreamToTargetPeer(peerId mesh.PeerName, remotePeerHost string) net.Conn {
 	LoggerObj.Println(fmt.Sprintf("Opening a stream to %d", peerId))
 
-	oc, err := NewOverlayClient(olPeer.Peer, peerId, *olPeer.remotePeerHost, olPeer.Peer.GossipMM)
+	oc, err := NewOverlayClient(olPeer.Peer, peerId, remotePeerHost, olPeer.Peer.GossipMM)
 	if err != nil {
 		panic(err)
 	}
