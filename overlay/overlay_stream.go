@@ -69,7 +69,11 @@ func (os *OverlayStream) Read(p []byte) (n int, err error) {
 	//}
 	//p = retBuf
 	//os.localBufMtx.Unlock()
+	fmt.Println("OverlayStream::Read called cap(p)=", cap(p))
 	n_, _, err_ := os.channel.ReadDataChannel(p)
+	if n == 0 {
+		fmt.Printf("OverlayStream::Read: n == 0, %v", err)
+	}
 	fmt.Println("OverlayStream::Read called", n_, err)
 	return n_, err_
 }

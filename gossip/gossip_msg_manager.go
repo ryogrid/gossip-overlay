@@ -60,11 +60,12 @@ func (gmm *GossipMessageManager) unregisterChToHandlerTh(dest mesh.PeerName, str
 	gmm.pktHandlers.Delete(dest.String() + "-" + string(streamID))
 }
 
-func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, seqNum uint64, data []byte) error {
+func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint16, recvOpSide OperationSideAt, seqNum uint64, data []byte) (int, error) {
 	//util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID, " data:", data)
 	//util.OverlayDebugPrintln("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID)
 	fmt.Println("GossipMessageManager.SendToRemote called. dest:", dest, "streamID:", streamID)
 	var ret error = nil
+	var n = 0
 	c := make(chan struct{})
 	//gmm.actions <- func() {
 	go func() {
@@ -87,6 +88,7 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 				PktKind:      pktKind,
 			}
 			encodedData := sendObj.Encode()[0]
+			n = len(encodedData)
 			//util.OverlayDebugPrintln("GossipMessageManager.SendToRemote: encodedData:", encodedData)
 			for {
 				err := gmm.gossipDM.peer.send.GossipUnicast(dest, encodedData)
@@ -111,7 +113,7 @@ func (gmm *GossipMessageManager) SendToRemote(dest mesh.PeerName, streamID uint1
 	}()
 	<-c
 
-	return ret
+	return n, ret
 }
 
 // use at notification of information for CtoC stream establishment (4way handshake)
@@ -137,7 +139,7 @@ func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamI
 			recvPktCh = make(chan *GossipPacket)
 			gmm.registerChToHandlerTh(dest, streamID, recvPktCh)
 			//gmm.gossipDM.bufs.Store(dest.String()+"-"+string(streamID), make([]byte, 0))
-			err := gmm.SendToRemote(dest, streamID, recvOpSide, seqNum, data)
+			_, err := gmm.SendToRemote(dest, streamID, recvOpSide, seqNum, data)
 			if err != nil {
 				ret = errors.New("remote peer becomes not available")
 				return
@@ -169,7 +171,7 @@ func (gmm *GossipMessageManager) SendPingAndWaitPong(dest mesh.PeerName, streamI
 // if seqNum is math.MaxUint32, it means that this packet is for heartbeat
 // if seqNum is other, it means that this packet is for notification of information for CtoC stream establishment (4way handshake)
 func (gmm *GossipMessageManager) SendPongPktToClient(remotePeer mesh.PeerName, streamID uint16, seqNum uint64) error {
-	err := gmm.SendToRemote(remotePeer, streamID, ClientSide, seqNum, []byte{})
+	_, err := gmm.SendToRemote(remotePeer, streamID, ClientSide, seqNum, []byte{})
 	if err != nil {
 		//fmt.Println(err)
 		//return err

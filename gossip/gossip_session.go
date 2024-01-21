@@ -54,9 +54,10 @@ func (oc *GossipSession) Write(b []byte) (n int, err error) {
 		return -1, errors.New("remote peer is inactive")
 	}
 
-	oc.gossipDM.peer.GossipMM.SendToRemote(oc.remoteAddress.PeerName, oc.StreamID, oc.remoteSessionSide, math.MaxUint64, b)
+	n_, err_ := oc.gossipDM.peer.GossipMM.SendToRemote(oc.remoteAddress.PeerName, oc.StreamID, oc.remoteSessionSide, math.MaxUint64, b)
 
-	return len(b), nil
+	//return len(b), nil
+	return n_, err_
 }
 
 // Close closes the conn and releases any Read calls
