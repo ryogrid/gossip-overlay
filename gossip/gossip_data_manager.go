@@ -102,33 +102,26 @@ func (gdm *GossipDataManager) read(fromPeer mesh.PeerName, streamID uint16) (res
 	//util.OverlayDebugPrintln("GossipDataManager.read called: before checking length of retBase loop.")
 	if isDataEmpty {
 		time.Sleep(1 * time.Millisecond)
-		//for {
-		//	if storedBuf, ok := gdm.loadBuffer(fromPeer, streamID); ok {
-		//		// wait unitl data received
-		//		//storedBuf.Mtx.Lock()
-		//		if len(storedBuf.Buf) > 0 {
-		//			// end waiting
-		//			//storedBuf.Mtx.Unlock()
-		//			break
-		//		}
-		//		//storedBuf.Mtx.Unlock()
-		//		time.Sleep(1 * time.Millisecond)
-		//	} else {
-		//		util.OverlayDebugPrintln("GossipDataManager.read: waiting end because GossipSession should closed.")
-		//		//val.Mtx.Unlock()
-		//		//return make([]byte, 0)
-		//		return nil
-		//	}
-		//}
-		//
-		//storedBuf, ok3 := gdm.loadBuffer(fromPeer, streamID)
-		//if ok3 {
-		//	storedBuf.Mtx.Lock()
-		//	copiedBuf = append(copiedBuf, storedBuf.Buf...)
-		//	storedBuf.Buf = make([]byte, 0)
-		//	//gdm.storeBuffer(fromPeer, streamID, storedBuf)
-		//	storedBuf.Mtx.Unlock()
-		//}
+		for {
+			val.Mtx.Lock()
+			if storedBuf, ok := gdm.loadBuffer(fromPeer, streamID); ok {
+				// wait unitl data received
+				//storedBuf.Mtx.Lock()
+				if len(storedBuf.Buf) > 0 {
+					// end waiting
+					copiedBuf = append(copiedBuf, val.Buf[0]...)
+					val.Buf = val.Buf[1:]
+					val.Mtx.Unlock()
+					break
+				}
+				//storedBuf.Mtx.Unlock()
+				time.Sleep(1 * time.Millisecond)
+			} else {
+				util.OverlayDebugPrintln("GossipDataManager.read: waiting end because GossipSession should closed.")
+				val.Mtx.Unlock()
+				return nil
+			}
+		}
 	}
 	//val.ReadMtx.Unlock()
 	//util.OverlayDebugPrintln("GossipDataManager.read called: after checking length of retBase loop.")
