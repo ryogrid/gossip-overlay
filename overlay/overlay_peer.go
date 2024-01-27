@@ -9,19 +9,17 @@ import (
 	"math"
 	"net"
 	"os"
-	"strconv"
 )
 
 var LoggerObj *log.Logger
 
 type OverlayPeer struct {
-	Peer           *gossip.GossipPeer
-	remotePeerHost *string
+	Peer *gossip.GossipPeer
 }
 
-func NewOverlayPeer(host *string, gossipListenPort int, peers *util.Stringset) (*OverlayPeer, error) {
+func NewOverlayPeer(selfPeerId uint64, gossipListenPort int, peers *util.Stringset) (*OverlayPeer, error) {
 	//name := mesh.PeerName(util.NewHashIDUint64(*host + ":" + strconv.Itoa(int(gossipListenPort))))
-	name := mesh.PeerName(util.NewHashIDUint16(*host + ":" + strconv.Itoa(int(gossipListenPort))))
+	//name := mesh.PeerName(util.NewHashIDUint16(*host + ":" + strconv.Itoa(int(gossipListenPort))))
 
 	meshConf := mesh.Config{
 		Host:               "0.0.0.0",
@@ -35,11 +33,11 @@ func NewOverlayPeer(host *string, gossipListenPort int, peers *util.Stringset) (
 
 	LoggerObj = log.New(os.Stderr, "gossip> ", log.LstdFlags)
 	emptyStr := ""
-	p := gossip.NewPeer(name, LoggerObj, &emptyStr, &emptyStr, &meshConf, peers)
+	p := gossip.NewPeer(mesh.PeerName(selfPeerId), LoggerObj, &emptyStr, &emptyStr, &meshConf, peers)
 	fmt.Println("NewOverlayPeer: peers=", peers.Slice())
 
-	remotePeerHost := meshConf.Host + ":" + strconv.Itoa(meshConf.Port)
-	return &OverlayPeer{p, &remotePeerHost}, nil
+	//remotePeerHost := meshConf.Host + ":" + strconv.Itoa(meshConf.Port)
+	return &OverlayPeer{p}, nil
 }
 
 func (olPeer *OverlayPeer) OpenStreamToTargetPeer(peerId mesh.PeerName, remotePeerHost string) net.Conn {
