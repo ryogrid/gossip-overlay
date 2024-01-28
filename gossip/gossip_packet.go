@@ -16,6 +16,7 @@ const (
 
 type GossipPacket struct {
 	FromPeer     mesh.PeerName
+	FromPeerHost string
 	ReceiverSide OperationSideAt
 	StreamID     uint16
 	SeqNum       uint64

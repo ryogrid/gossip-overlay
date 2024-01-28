@@ -92,8 +92,8 @@ func main() {
 	}()
 
 	if *side == "send" {
-		go clientRoutine(p, mesh.PeerName(destNameNum))
-		go clientRoutine(p, mesh.PeerName(destNameNum))
+		go clientRoutine(p, mesh.PeerName(destNameNum), *meshListen)
+		go clientRoutine(p, mesh.PeerName(destNameNum), *meshListen)
 	} else if *side == "recv" {
 		go serverRoutine(p)
 	} else {
@@ -142,9 +142,9 @@ func serverRoutine(p *gossip.GossipPeer) {
 	}
 }
 
-func clientRoutine(p *gossip.GossipPeer, destName mesh.PeerName) {
+func clientRoutine(p *gossip.GossipPeer, destName mesh.PeerName, remotePeerHost string) {
 	util.OverlayDebugPrintln("start clientRoutine")
-	oc, err := overlay.NewOverlayClient(p, destName, p.GossipMM)
+	oc, err := overlay.NewOverlayClient(p, destName, remotePeerHost, p.GossipMM)
 	if err != nil {
 		panic(err)
 	}

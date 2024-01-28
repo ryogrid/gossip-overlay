@@ -20,14 +20,16 @@ var retryCntExceededErr = fmt.Errorf("retryCnt exceeded")
 type OverlayClient struct {
 	peer            *gossip.GossipPeer
 	remotePeerName  mesh.PeerName
+	remotePeerHost  *string
 	gossipMM        *gossip.GossipMessageManager
 	HertbeatThFinCh *chan bool
 }
 
-func NewOverlayClient(p *gossip.GossipPeer, remotePeer mesh.PeerName, gossipMM *gossip.GossipMessageManager) (*OverlayClient, error) {
+func NewOverlayClient(p *gossip.GossipPeer, remotePeer mesh.PeerName, remotePeerHost string, gossipMM *gossip.GossipMessageManager) (*OverlayClient, error) {
 	ret := &OverlayClient{
 		peer:            p,
 		remotePeerName:  remotePeer,
+		remotePeerHost:  &remotePeerHost,
 		gossipMM:        gossipMM,
 		HertbeatThFinCh: nil,
 	}
@@ -43,7 +45,7 @@ func genRandomStreamId() uint16 {
 }
 
 func (oc *OverlayClient) establishCtoCStreamInner(streamID uint16) (*sctp.Association, *gossip.GossipSession, error) {
-	conn, err := oc.peer.GossipMM.NewGossipSessionForClientToClient(oc.remotePeerName, streamID)
+	conn, err := oc.peer.GossipMM.NewGossipSessionForClientToClient(oc.remotePeerName, *oc.remotePeerHost, streamID)
 	if err != nil {
 		fmt.Println(err)
 		return nil, nil, err
@@ -71,10 +73,14 @@ func (oc *OverlayClient) establishCtoCStream(streamID uint16) (*OverlayStream, e
 	loggerFactory := logging.NewDefaultLoggerFactory()
 
 	cfg := &datachannel.Config{
-		ChannelType:          datachannel.ChannelTypePartialReliableRexmit,
-		ReliabilityParameter: 0,
-		Label:                "data",
-		LoggerFactory:        loggerFactory,
+		ChannelType: datachannel.ChannelTypePartialReliableRexmit,
+		//ChannelType: datachannel.ChannelTypeReliable,
+		//ChannelType: datachannel.ChannelTypeReliableUnordered,
+		ReliabilityParameter: 1,
+		//Label:         "data",
+		Label:         "",
+		LoggerFactory: loggerFactory,
+		Negotiated:    false,
 	}
 
 	//dc, err := datachannel.Dial(a, 100, cfg)
@@ -97,7 +103,7 @@ retry:
 		fmt.Println(retryCntExceededErr)
 		return retryCntExceededErr
 	}
-	// 4way
+	// 2way
 	err := oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 5*time.Second, 0, []byte(oc.peer.GossipDataMan.Self.String()))
 	if err != nil {
 		// timeout
@@ -106,14 +112,14 @@ retry:
 		goto retry
 	}
 	util.OverlayDebugPrintln("first GossipMessageManager.SendPingAndWaitPong call returned")
-	err = oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 5*time.Second, 1, []byte(oc.peer.GossipDataMan.Self.String()))
-	if err != nil {
-		// timeout
-		util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)
-		retryCnt++
-		goto retry
-	}
-	util.OverlayDebugPrintln("second GossipMessageManager.SendPingAndWaitPong call returned")
+	//err = oc.gossipMM.SendPingAndWaitPong(oc.remotePeerName, streamId, gossip.ServerSide, 5*time.Second, 1, []byte(oc.peer.GossipDataMan.Self.String()))
+	//if err != nil {
+	//	// timeout
+	//	util.OverlayDebugPrintln("GossipMessageManager.SendPingAndWaitPong: err:", err)
+	//	retryCnt++
+	//	goto retry
+	//}
+	//util.OverlayDebugPrintln("second GossipMessageManager.SendPingAndWaitPong call returned")
 	return nil
 }
 
@@ -137,6 +143,10 @@ func (oc *OverlayClient) OpenChannel(streamId uint16) (*OverlayStream, uint16, e
 	overlayStream, err := oc.establishCtoCStream(streamId_)
 	if err != nil {
 		panic(err)
+	}
+
+	if err != nil {
+		panic(err)
 		//fmt.Println(err)
 		//return nil, math.MaxUint16, err
 	}
@@ -144,8 +154,8 @@ func (oc *OverlayClient) OpenChannel(streamId uint16) (*OverlayStream, uint16, e
 	util.OverlayDebugPrintln("end of OverlayClient::OpenChannel")
 
 	// start heartbeat thread
-	tmpCh := make(chan bool)
-	oc.HertbeatThFinCh = &tmpCh
+	//tmpCh := make(chan bool)
+	//oc.HertbeatThFinCh = &tmpCh
 	//go oc.heaertbeatSendingTh(overlayStream.gsess)
 
 	return overlayStream, streamId_, nil
@@ -188,6 +198,6 @@ loop:
 }
 
 func (oc *OverlayClient) Destroy() error {
-	close(*oc.HertbeatThFinCh)
+	//close(*oc.HertbeatThFinCh)
 	return nil
 }

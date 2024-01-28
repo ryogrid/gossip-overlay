@@ -25,7 +25,7 @@ var _ net.Conn = &GossipSession{}
 
 // Read reads data from the remote peer through gossip layer (in fact, from local buffer)
 func (oc *GossipSession) Read(b []byte) (n int, err error) {
-	util.OverlayDebugPrintln("GossipSession.read called")
+	//util.OverlayDebugPrintln("GossipSession.read called")
 
 	if !oc.IsActive {
 		// this session is deactivated according to result of heartbeat check
@@ -45,16 +45,18 @@ func (oc *GossipSession) Read(b []byte) (n int, err error) {
 
 // Write sends len(p) bytes from p to the remote peer through gossip layer
 func (oc *GossipSession) Write(b []byte) (n int, err error) {
-	util.OverlayDebugPrintln("GossipSession.write called", b)
+	//util.OverlayDebugPrintln("GossipSession.write called", b)
+	util.OverlayDebugPrintln("GossipSession.write called")
 
 	if !oc.IsActive {
 		// this session is deactivated according to result of heartbeat check
 		return -1, errors.New("remote peer is inactive")
 	}
 
-	oc.gossipDM.peer.GossipMM.SendToRemote(oc.remoteAddress.PeerName, oc.StreamID, oc.remoteSessionSide, math.MaxUint64, b)
+	n_, err_ := oc.gossipDM.peer.GossipMM.SendToRemote(oc.remoteAddress.PeerName, oc.StreamID, oc.remoteSessionSide, math.MaxUint64, b)
 
-	return len(b), nil
+	//return len(b), nil
+	return n_, err_
 }
 
 // Close closes the conn and releases any Read calls
@@ -75,6 +77,7 @@ func (oc *GossipSession) LocalAddr() net.Addr {
 func (oc *GossipSession) RemoteAddr() net.Addr {
 	util.OverlayDebugPrintln("GossipSession.RemoteAddr called")
 	if oc.remoteAddress.PeerName != math.MaxUint64 {
+		util.OverlayDebugPrintln(*oc.remoteAddress.PeerHost)
 		return oc.remoteAddress
 	}
 	return nil

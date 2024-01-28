@@ -7,7 +7,7 @@ import (
 )
 
 func TestSerializeDeserialize(t *testing.T) {
-	gp := GossipPacket{mesh.PeerName(0), ClientSide, 1, 0, PACKET_KIND_CTC_DATA, []byte{1, 2, 3}}
+	gp := GossipPacket{mesh.PeerName(0), "127.0.0.1", ClientSide, 1, 0, PACKET_KIND_CTC_DATA, []byte{1, 2, 3}}
 	//gp := GossipPacket{[]byte{}, ClientSide}
 
 	buf := gp.Encode()
