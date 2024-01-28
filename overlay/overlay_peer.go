@@ -9,6 +9,7 @@ import (
 	"math"
 	"net"
 	"os"
+	"strconv"
 )
 
 var LoggerObj *log.Logger
@@ -17,7 +18,7 @@ type OverlayPeer struct {
 	Peer *gossip.GossipPeer
 }
 
-func NewOverlayPeer(selfPeerId uint64, gossipListenPort int, peers *util.Stringset) (*OverlayPeer, error) {
+func NewOverlayPeer(selfPeerId uint64, gossipListenPort int, peers *util.Stringset, isUseOnProxy bool) (*OverlayPeer, error) {
 	//name := mesh.PeerName(util.NewHashIDUint64(*host + ":" + strconv.Itoa(int(gossipListenPort))))
 	//name := mesh.PeerName(util.NewHashIDUint16(*host + ":" + strconv.Itoa(int(gossipListenPort))))
 
@@ -33,7 +34,16 @@ func NewOverlayPeer(selfPeerId uint64, gossipListenPort int, peers *util.Strings
 
 	LoggerObj = log.New(os.Stderr, "gossip> ", log.LstdFlags)
 	emptyStr := ""
-	p := gossip.NewPeer(mesh.PeerName(selfPeerId), LoggerObj, &emptyStr, &emptyStr, &meshConf, peers)
+
+	var peerHostAndPort string
+	peerHostAndPort = "127.0.0.1:" + strconv.Itoa(gossipListenPort)
+	if isUseOnProxy {
+		// proxy's host view on application layer should match proxied application working address
+		// (convention: proxy is launched at proxied application working port + 2)
+		peerHostAndPort = "127.0.0.1:" + strconv.Itoa(gossipListenPort-2)
+	}
+
+	p := gossip.NewPeer(mesh.PeerName(selfPeerId), &peerHostAndPort, LoggerObj, &emptyStr, &emptyStr, &meshConf, peers)
 	fmt.Println("NewOverlayPeer: peers=", peers.Slice())
 
 	//remotePeerHost := meshConf.Host + ":" + strconv.Itoa(meshConf.Port)

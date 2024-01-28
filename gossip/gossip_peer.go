@@ -6,7 +6,6 @@ import (
 	"github.com/weaveworks/mesh"
 	"io/ioutil"
 	"log"
-	"strconv"
 )
 
 // GossipPeer encapsulates GossipDataManager, GossipMessageManager and implements mesh.Gossiper.
@@ -30,7 +29,7 @@ var _ mesh.Gossiper = &GossipPeer{}
 // Construct a GossipPeer with empty GossipDataManager.
 // Be sure to registerGossipObj a channel, later,
 // so we can make outbound communication.
-func NewPeer(self mesh.PeerName, logger *log.Logger, nickname *string, channel *string, meshConf *mesh.Config, peers *util.Stringset) *GossipPeer {
+func NewPeer(self mesh.PeerName, peerHostAndPort *string, logger *log.Logger, nickname *string, channel *string, meshConf *mesh.Config, peers *util.Stringset) *GossipPeer {
 	router, err := mesh.NewRouter(*meshConf, self, *nickname, mesh.NullOverlay{}, log.New(ioutil.Discard, "", 0))
 
 	if err != nil {
@@ -39,11 +38,11 @@ func NewPeer(self mesh.PeerName, logger *log.Logger, nickname *string, channel *
 
 	actions := make(chan func())
 	tmpDM := NewGossipDataManager(self)
-	peerHost := meshConf.Host + ":" + strconv.Itoa(meshConf.Port)
-	fmt.Println("peerHost: ", peerHost)
+
+	fmt.Println("peerHostAndPort: ", *peerHostAndPort)
 	p := &GossipPeer{
 		GossipDataMan: tmpDM,
-		GossipMM:      NewGossipMessageManager(&PeerAddress{self, &peerHost}, tmpDM),
+		GossipMM:      NewGossipMessageManager(&PeerAddress{self, peerHostAndPort}, tmpDM),
 		send:          nil, // must .registerGossipObj() later
 		actions:       actions,
 		quit:          make(chan struct{}),

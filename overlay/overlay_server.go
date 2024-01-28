@@ -130,10 +130,10 @@ func (ols *OverlayServer) InitClientInfoNotifyPktRootHandlerTh() error {
 	return nil
 }
 
-func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, uint16, error) {
+func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, *string, uint16, error) {
 	clInfo, more := <-ols.info4OLChannelRecvCh
 	if !more {
-		return nil, math.MaxUint64, math.MaxUint16, fmt.Errorf("OverlayServer is closed")
+		return nil, math.MaxUint64, nil, math.MaxUint16, fmt.Errorf("OverlayServer is closed")
 	}
 	//fmt.Println(clInfo)
 	olc, err := NewOverlayClient(ols.peer, clInfo.remotePeerName, clInfo.remotePeerHost, ols.gossipMM)
@@ -143,10 +143,10 @@ func (ols *OverlayServer) Accept() (*OverlayStream, mesh.PeerName, uint16, error
 
 	os, _, err2 := olc.OpenChannel(clInfo.streamID)
 	if err2 != nil {
-		return nil, math.MaxUint64, clInfo.streamID, err2
+		return nil, math.MaxUint64, nil, clInfo.streamID, err2
 	}
 
-	return os, clInfo.remotePeerName, clInfo.streamID, nil
+	return os, clInfo.remotePeerName, &clInfo.remotePeerHost, clInfo.streamID, nil
 }
 
 func (ols *OverlayServer) Close() error {

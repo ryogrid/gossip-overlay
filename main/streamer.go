@@ -76,7 +76,7 @@ func main() {
 		}
 	}
 
-	p := gossip.NewPeer(name, logger, nickname, channel, &meshConf, peers)
+	p := gossip.NewPeer(name, meshListen, logger, nickname, channel, &meshConf, peers)
 
 	defer func() {
 		logger.Printf("mesh router stopping")
@@ -112,7 +112,7 @@ func serverRoutine(p *gossip.GossipPeer) {
 	}
 
 	for {
-		channel, remotePeerName, streamID, err2 := oserv.Accept()
+		channel, remotePeerName, _, streamID, err2 := oserv.Accept()
 		if err2 != nil {
 			panic(err2)
 		}
