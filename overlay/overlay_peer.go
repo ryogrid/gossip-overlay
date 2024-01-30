@@ -23,7 +23,7 @@ func NewOverlayPeer(selfPeerId uint64, gossipListenHost *string, gossipListenPor
 	//name := mesh.PeerName(util.NewHashIDUint16(*host + ":" + strconv.Itoa(int(gossipListenPort))))
 
 	meshConf := mesh.Config{
-		Host:               *gossipListenHost,
+		Host:               "0.0.0.0",
 		Port:               gossipListenPort,
 		ProtocolMinVersion: mesh.ProtocolMaxVersion,
 		Password:           nil,
