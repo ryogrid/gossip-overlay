@@ -28,7 +28,7 @@ func NewOverlayListener(ol *OverlayPeer) net.Listener {
 // func (ol *OverlayListener) Accept() (net.Conn, error) {
 func (ol *OverlayListener) Accept() (net.Conn, error) {
 	fmt.Println("OverlayListener::Accept called", fmt.Sprintf("%d", ol.overlayServer.peer.GossipDataMan.Self))
-	channel, _, _, err := ol.overlayServer.Accept()
+	channel, _, _, _, err := ol.overlayServer.Accept()
 	fmt.Println("OverlayListener::Accept fin", fmt.Sprintf("%v", err))
 	return channel, err
 	//
