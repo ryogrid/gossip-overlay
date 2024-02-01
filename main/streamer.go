@@ -3,11 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/ryogrid/gossip-overlay/gossip"
-	"github.com/ryogrid/gossip-overlay/overlay"
-	"github.com/ryogrid/gossip-overlay/overlay_setting"
-	"github.com/ryogrid/gossip-overlay/util"
-	"github.com/weaveworks/mesh"
 	"log"
 	"math"
 	"net"
@@ -17,6 +12,11 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/ryogrid/gossip-overlay/overlay"
+	"github.com/ryogrid/gossip-overlay/overlay_setting"
+	"github.com/ryogrid/gossip-overlay/util"
+	"github.com/weaveworks/mesh"
 )
 
 /*
@@ -30,7 +30,6 @@ func main() {
 		meshListen = flag.String("mesh", net.JoinHostPort("0.0.0.0", strconv.Itoa(mesh.Port)), "mesh listen address")
 		hwaddr     = flag.String("hwaddr", util.MustHardwareAddr(), "MAC address, i.e. mesh peer ID")
 		nickname   = flag.String("nickname", util.MustHostname(), "peer nickname")
-		channel    = flag.String("channel", "default", "gossip channel name")
 		destname   = flag.String("destname", "", "destination peer name (optional)")
 		debug      = flag.String("debug", "false", "print debug info, true of false (optional)")
 	)
@@ -52,20 +51,15 @@ func main() {
 		logger.Fatalf("mesh port: %d: %v", port, err)
 	}
 
-	meshConf := mesh.Config{
-		Host:               host,
-		Port:               port,
-		ProtocolMinVersion: mesh.ProtocolMaxVersion,
-		Password:           nil,
-		ConnLimit:          64,
-		PeerDiscovery:      true,
-		TrustedSubnets:     []*net.IPNet{},
-	}
-
 	runtime.GOMAXPROCS(10)
 	name, err := mesh.PeerNameFromString(*hwaddr)
 	if err != nil {
 		logger.Fatalf("%s: %v", *hwaddr, err)
+	}
+
+	p, err := overlay.NewOverlayPeer(uint64(name), &host, port, peers, false)
+	if err != nil {
+		panic(err)
 	}
 
 	var destNameNum uint64 = math.MaxUint64
@@ -76,13 +70,6 @@ func main() {
 		}
 	}
 
-	p := gossip.NewPeer(name, meshListen, logger, nickname, channel, &meshConf, peers)
-
-	defer func() {
-		logger.Printf("mesh router stopping")
-		p.Router.Stop()
-	}()
-
 	errs := make(chan error)
 
 	go func() {
@@ -92,8 +79,8 @@ func main() {
 	}()
 
 	if *side == "send" {
-		go clientRoutine(p, mesh.PeerName(destNameNum), *meshListen)
-		go clientRoutine(p, mesh.PeerName(destNameNum), *meshListen)
+		go clientRoutine(p, mesh.PeerName(destNameNum), *destname)
+		go clientRoutine(p, mesh.PeerName(destNameNum), *destname)
 	} else if *side == "recv" {
 		go serverRoutine(p)
 	} else {
@@ -104,36 +91,33 @@ func main() {
 	logger.Print(<-errs)
 }
 
-func serverRoutine(p *gossip.GossipPeer) {
+func serverRoutine(p *overlay.OverlayPeer) {
 	util.OverlayDebugPrintln("start serverRoutine")
-	oserv, err := overlay.NewOverlayServer(p, p.GossipMM)
-	if err != nil {
-		panic(err)
-	}
 
+	listener := p.GetOverlayListener()
 	for {
-		channel, remotePeerName, _, streamID, err2 := oserv.Accept()
-		if err2 != nil {
-			panic(err2)
+		channel, err := listener.Accept()
+		if err != nil {
+			panic(err)
 		}
-		fmt.Println("accepted:", remotePeerName, streamID)
+		fmt.Println("accepted:", channel.RemoteAddr().String())
 
-		go func(channel_ *overlay.OverlayStream) {
+		go func(channel_ net.Conn) {
 			pongSeqNum := 0
 			for {
 				util.OverlayDebugPrintln("call ReadDataChannel!")
 				buff := make([]byte, 1024)
-				n1, err3 := channel_.Read(buff)
-				if err3 != nil || n1 != 1 {
-					util.OverlayDebugPrintln("panic occured at ReadDataChannel!", err3, n1)
+				n, err := channel_.Read(buff)
+				if err != nil || n != 1 {
+					util.OverlayDebugPrintln("panic occured at ReadDataChannel!", err, n)
 					panic(err)
 				}
 				fmt.Println("received:", buff[0])
 
 				util.OverlayDebugPrintln("call WriteDataChannel!")
-				n2, err4 := channel_.Write([]byte{byte(pongSeqNum % 255), buff[0]})
-				if err4 != nil || n2 != 2 {
-					panic(err4)
+				n, err = channel_.Write([]byte{byte(pongSeqNum % 255), buff[0]})
+				if err != nil || n != 2 {
+					panic(err)
 				}
 				fmt.Println("sent:", pongSeqNum%255, buff[0])
 				pongSeqNum++
@@ -142,26 +126,18 @@ func serverRoutine(p *gossip.GossipPeer) {
 	}
 }
 
-func clientRoutine(p *gossip.GossipPeer, destName mesh.PeerName, remotePeerHost string) {
+func clientRoutine(p *overlay.OverlayPeer, destName mesh.PeerName, remotePeerHost string) {
 	util.OverlayDebugPrintln("start clientRoutine")
-	oc, err := overlay.NewOverlayClient(p, destName, remotePeerHost, p.GossipMM)
-	if err != nil {
-		panic(err)
-	}
 
-	channel, streamID, err2 := oc.OpenChannel(math.MaxUint16)
-	if err2 != nil {
-		panic(err2)
-	}
-	fmt.Println("opened:", streamID)
+	channel := p.OpenStreamToTargetPeer(destName, remotePeerHost)
 
 	pingSeqNum := 0
 	for {
 		util.OverlayDebugPrintln("call WriteDataChannel!")
-		n, err3 := channel.Write([]byte{byte(pingSeqNum % 255)})
-		if err3 != nil || n != 1 {
-			util.OverlayDebugPrintln("panic occured at WriteDataChannel!", err3, n)
-			panic(err3)
+		n, err := channel.Write([]byte{byte(pingSeqNum % 255)})
+		if err != nil || n != 1 {
+			util.OverlayDebugPrintln("panic occured at WriteDataChannel!", err, n)
+			panic(err)
 		}
 		fmt.Println("sent:", pingSeqNum%255)
 		pingSeqNum++
