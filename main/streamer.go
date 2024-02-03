@@ -28,10 +28,10 @@ func main() {
 	var (
 		side       = flag.String("side", "relay", "specify peer type (default: relay))")
 		meshListen = flag.String("mesh", net.JoinHostPort("0.0.0.0", strconv.Itoa(mesh.Port)), "mesh listen address")
-		hwaddr     = flag.String("hwaddr", util.MustHardwareAddr(), "MAC address, i.e. mesh peer ID")
-		nickname   = flag.String("nickname", util.MustHostname(), "peer nickname")
-		destId     = flag.String("destid", "", "destination peer name (optional)")
-		debug      = flag.String("debug", "false", "print debug info, true of false (optional)")
+		hwaddr     = flag.String("hwaddr", util.MustHardwareAddr(), "MAC address style number description for generating self peer ID (default: MAC address of primary NW interface)")
+		nickname   = flag.String("nickname", util.MustHostname(), "peer nickname (default: hostname of launched machine)")
+		destId     = flag.String("destid", "", "destination peer peerId (optional)")
+		debug      = flag.String("debug", "false", "print debug info, true of false (default: false)")
 	)
 	flag.Var(peers, "peer", "initial peer (may be repeated)")
 	flag.Parse()
@@ -52,12 +52,12 @@ func main() {
 	}
 
 	runtime.GOMAXPROCS(10)
-	name, err := mesh.PeerNameFromString(*hwaddr)
+	peerId, err := mesh.PeerNameFromString(*hwaddr)
 	if err != nil {
 		logger.Fatalf("%s: %v", *hwaddr, err)
 	}
 
-	p, err := overlay.NewOverlayPeer(uint64(name), &host, port, peers, false)
+	p, err := overlay.NewOverlayPeer(uint64(peerId), &host, port, peers, false)
 	if err != nil {
 		panic(err)
 	}
