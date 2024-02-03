@@ -6,7 +6,7 @@
 - Machines on network having NAT can join
 
 ## Build (sample program)
-$ go build main/streamer.go
+$ go build -o streamer main/streamer.go
 
 ## Usage
 Message Ping Pong between 2 peers through one intermediate peer  
