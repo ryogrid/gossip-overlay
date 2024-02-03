@@ -21,7 +21,7 @@ import (
 
 /*
 .\streamer.exe -side recv -hwaddr 00:00:00:00:00:02 -nickname b -mesh :6002 -debug false | Tee-Object -FilePath ".\recv-1.txt"
-.\streamer.exe -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -destname 2 -peer 127.0.0.1:6002 -debug false | Tee-Object -FilePath ".\send-1.txt"
+.\streamer.exe -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -destid 2 -peer 127.0.0.1:6002 -debug false | Tee-Object -FilePath ".\send-1.txt"
 */
 func main() {
 	peers := &util.Stringset{}
@@ -30,7 +30,7 @@ func main() {
 		meshListen = flag.String("mesh", net.JoinHostPort("0.0.0.0", strconv.Itoa(mesh.Port)), "mesh listen address")
 		hwaddr     = flag.String("hwaddr", util.MustHardwareAddr(), "MAC address, i.e. mesh peer ID")
 		nickname   = flag.String("nickname", util.MustHostname(), "peer nickname")
-		destname   = flag.String("destname", "", "destination peer name (optional)")
+		destId     = flag.String("destid", "", "destination peer name (optional)")
 		debug      = flag.String("debug", "false", "print debug info, true of false (optional)")
 	)
 	flag.Var(peers, "peer", "initial peer (may be repeated)")
@@ -62,9 +62,9 @@ func main() {
 		panic(err)
 	}
 
-	var destNameNum uint64 = math.MaxUint64
-	if *destname != "" {
-		destNameNum, err = strconv.ParseUint(*destname, 10, 64)
+	var destIdNum uint64 = math.MaxUint64
+	if *destId != "" {
+		destIdNum, err = strconv.ParseUint(*destId, 10, 64)
 		if err != nil {
 			logger.Fatalf("Could not parse Destname: %v", err)
 		}
@@ -79,12 +79,11 @@ func main() {
 	}()
 
 	if *side == "send" {
-		go clientRoutine(p, mesh.PeerName(destNameNum), *destname)
-		go clientRoutine(p, mesh.PeerName(destNameNum), *destname)
+		go clientRoutine(p, mesh.PeerName(destIdNum))
+		go clientRoutine(p, mesh.PeerName(destIdNum))
 	} else if *side == "recv" {
 		go serverRoutine(p)
 	} else {
-		//panic("invalid side")
 		// do nothing (relay)
 	}
 
@@ -94,13 +93,12 @@ func main() {
 func serverRoutine(p *overlay.OverlayPeer) {
 	util.OverlayDebugPrintln("start serverRoutine")
 
-	listener := p.GetOverlayListener()
 	for {
-		channel, err := listener.Accept()
+		channel, remotePeerId, remoteHost, _, err := p.Accept()
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("accepted:", channel.RemoteAddr().String())
+		fmt.Println("accepted:", uint64(remotePeerId), remoteHost)
 
 		go func(channel_ net.Conn) {
 			pongSeqNum := 0
@@ -126,10 +124,12 @@ func serverRoutine(p *overlay.OverlayPeer) {
 	}
 }
 
-func clientRoutine(p *overlay.OverlayPeer, destName mesh.PeerName, remotePeerHost string) {
+func clientRoutine(p *overlay.OverlayPeer, destPeerId mesh.PeerName) {
 	util.OverlayDebugPrintln("start clientRoutine")
 
-	channel := p.OpenStreamToTargetPeer(destName, remotePeerHost)
+	// second argument is for specific application...
+	// you can set empty string
+	channel := p.OpenStreamToTargetPeer(destPeerId, "")
 
 	pingSeqNum := 0
 	for {

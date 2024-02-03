@@ -16,12 +16,11 @@ var LoggerObj *log.Logger
 
 type OverlayPeer struct {
 	Peer *gossip.GossipPeer
+	// when ussing OverlayListener, this field is not used
+	olServ *OverlayServer
 }
 
 func NewOverlayPeer(selfPeerId uint64, gossipListenHost *string, gossipListenPort int, peers *util.Stringset, isUseOnProxy bool) (*OverlayPeer, error) {
-	//name := mesh.PeerName(util.NewHashIDUint64(*host + ":" + strconv.Itoa(int(gossipListenPort))))
-	//name := mesh.PeerName(util.NewHashIDUint16(*host + ":" + strconv.Itoa(int(gossipListenPort))))
-
 	meshConf := mesh.Config{
 		Host:               "0.0.0.0",
 		Port:               gossipListenPort,
@@ -47,7 +46,7 @@ func NewOverlayPeer(selfPeerId uint64, gossipListenHost *string, gossipListenPor
 	fmt.Println("NewOverlayPeer: peers=", peers.Slice())
 
 	//remotePeerHost := meshConf.Host + ":" + strconv.Itoa(meshConf.Port)
-	return &OverlayPeer{p}, nil
+	return &OverlayPeer{p, nil}, nil
 }
 
 func (olPeer *OverlayPeer) OpenStreamToTargetPeer(peerId mesh.PeerName, remotePeerHost string) net.Conn {
@@ -69,4 +68,15 @@ func (olPeer *OverlayPeer) OpenStreamToTargetPeer(peerId mesh.PeerName, remotePe
 
 func (olPeer *OverlayPeer) GetOverlayListener() net.Listener {
 	return NewOverlayListener(olPeer)
+}
+
+func (olPeer *OverlayPeer) Accept() (stream *OverlayStream, remotePeerId mesh.PeerName, remotePeerHost *string, streamId uint16, err error) {
+	if olPeer.olServ == nil {
+		oserv, err_ := NewOverlayServer(olPeer.Peer, olPeer.Peer.GossipMM)
+		if err_ != nil {
+			panic(err_)
+		}
+		olPeer.olServ = oserv
+	}
+	return olPeer.olServ.Accept()
 }
