@@ -11,6 +11,7 @@ import (
 	"github.com/weaveworks/mesh"
 	"math"
 	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -37,11 +38,21 @@ func NewOverlayClient(p *gossip.GossipPeer, remotePeer mesh.PeerName, remotePeer
 	return ret, nil
 }
 
+// for avoiding genRandomStreamId method return same value...
+var randomIdCallCnt = int32(0)
+var randomIdCallCntMtx = new(sync.Mutex)
+
 func genRandomStreamId() uint16 {
 	dt := time.Now()
 	unix := dt.UnixNano()
 	randGen := rand.New(rand.NewSource(unix))
-	return uint16(randGen.Uint32())
+	var localCallCnt int32
+	randomIdCallCntMtx.Lock()
+	localCallCnt = randomIdCallCnt
+	randomIdCallCnt++
+	randomIdCallCntMtx.Unlock()
+
+	return uint16(randGen.Uint32() + uint32(localCallCnt))
 }
 
 func (oc *OverlayClient) establishCtoCStreamInner(streamID uint16) (*sctp.Association, *gossip.GossipSession, error) {
