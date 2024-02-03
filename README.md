@@ -18,7 +18,7 @@ Procedure below needs shell x 3 :)
 ```
 $ ./streamer -hwaddr 00:00:00:00:00:01 -nickname a -mesh :6001
 $ ./streamer -side recv -hwaddr 00:00:00:00:00:02 -nickname b -mesh :6002 -peer 127.0.0.1:6001
-$ ./streamer -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -peer 127.0.0.1:6001 -destname 2
+$ ./streamer -side send -hwaddr 00:00:00:00:00:03 -nickname c -mesh :6003 -peer 127.0.0.1:6001 -destid 2
 ```
 
 Network Topology:  
