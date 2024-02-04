@@ -32,4 +32,5 @@ Network Topology:
   - [gord-overlay](https://github.com/ryogrid/gord-overlay)
 
 ## TODO
+- Replace [pion/sctp](https://github.com/pion/sctp) (SCTP) with [hashicorp/yamux](https://github.com/hashicorp/yamux) (QUIC like protcol) and redesign overlay connection establishment sequence...
 - [gist (in Japanese)](https://gist.github.com/ryogrid/e78088bc531bc62c10eba1c0d0e0b7fc)
