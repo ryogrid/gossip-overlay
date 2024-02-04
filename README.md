@@ -8,7 +8,7 @@
 ## Build (sample program)
 $ go build -o streamer main/streamer.go
 
-## Usage
+## Usage (sample program)
 Message Ping Pong between 2 peers through one intermediate peer  
 (thid peer-c establishes two connectionns to peer-b on overlay NW and send ping to each connection)
 
