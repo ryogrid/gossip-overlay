@@ -3,7 +3,7 @@
 - Bi-directional reliable stream I/F which hides peers on gossip protcol layer with SCTP
 - Any centralized server is not needed
 - TCP socket programming style interface (system architecture like a server and clients can be implemented) 
-- Machines on network having NAT can join
+- NAT transparent communication
 
 ## Build (sample program)
 $ go build -o streamer main/streamer.go
